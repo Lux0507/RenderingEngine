@@ -1,11 +1,13 @@
 import numpy as np
-
+from math import * 
 
 
 class base:
     def __init__(self, data: list):
         self.dimensions = len(data)
         self.__data = np.ndarray(data)
+        self.__curr = 0
+        self.__end = self.dimensions
     def __init__(self, data: np.ndarray):
         if len(data.shape) != 1:
             raise ValueError(
@@ -17,37 +19,79 @@ class base:
         if len(self.__data) <= key:
             return None
         return self.__data[key]
+    def __iter__(self):
+        return self
+    def __next__(self):
+        if self.__curr >= self.__end:
+            raise StopIteration
+        result = self.__data[self.__curr]
+        self.__curr += 1
+        return result
+    def __neg__(self):
+        return base(self.__data * -1)
     def __add__(self, other):
+        if self.dimensions != other.dimensions:
+            raise ValueError(
+                "Can't add two vectors with different dimensions"
+            )
         return base(self.__data + other.__data)
+    def __sub__(self, other):
+        if self.dimensions != other.dimensions:
+            raise ValueError(
+                "Can't add two vectors with different dimensions"
+            )
+        return base(self.__data - other.__data)
+    def scale(self, factor):
+        return base(self.__data * factor) # multipliing a list with a scalar
+
+point = base
 
 class vector(base):
     def __init__(self, data):
         super().__init__(data)
+        self.magnitude = self.__magnitude()
+    def __magnitude(self):
+        sum = 0
+        for elem in self.__data:
+            sum += elem ** 2
+        return sqrt(sum)
+    def __mul__(self, other):
+        if type(other) == base:
+            return self.crossProd(other)
+        else:
+            return self.scale(other)
+    def normalize(self):
+        return self.scale(1/self.magnitude)
+    def dotProd(self, other):
+        pass
+    def crossProd(self, other):
+        if (self.dimensions !=3) or (other.dimension != 3):
+            raise ValueError(
+                "cross product only works on vectors in three dimensions." +\
+                "Got vectors with dimensions " + self.dimensions + " and " +\
+                other.dimensions
+            )
+
+    def angleToVector(self, other):
+        return abs(
+            acos(
+                self.dotProd(other) / \
+                (self.magnitude * other.magnitude)
+            )
+        )
     def apply(self, point):
         if self.dimensions != point.dimensions:
             raise ValueError() # TODO
         return point(point + self)
-    
-class point(base):
-    def __init__(self, data):
-        super().__init__(data)
-    '''creates a vector pointing from self to the given tip'''
-    def vectorto(self, tip):
-        return vector(tip - self)
-    def vectorfrom(self, start): 
-        return vector(self - start)
-
-'''creates a vector leading from start to tip'''
-def vbp(start: base, tip: base):
-    return base(tip - start)
-
 
 class matrix:
     def __init__(self, matrix: np.ndarray):
-        self.Shape = matrix.shape
+        self.shape = matrix.shape
         self.__data = matrix
+        self.__curr = 0
+        self.__end = self.shape[0]
     def __init__(self, shape: tuple):
-        self.Shape: tuple = shape
+        self.shape: tuple = shape
         self.__data: np.ndarray = np.zeros(shape)
     def __getitem__(self, index):
         if type(index) != tuple: # No tuple as argument
@@ -76,6 +120,14 @@ class matrix:
                 " in matrix"
             )
         self.__data[index[0]][index[1]] = value
+    def __iter__(self):
+        return self
+    def __next__(self):
+        if self.__curr >= self.__end:
+            raise StopIteration
+        result = self.__data[self.__curr]
+        self.__curr += 1
+        return result
     def __mul__(self, other):
         if type(other) != matrix:
             raise TypeError(
@@ -83,25 +135,25 @@ class matrix:
                 str(type(other)) + 
                 ". For multiplication of matrix and vector use method \'use\'."
             )
-        if (self.Shape != other.Shape) or (self.Shape[0] != self.Shape[1]):
+        if (self.shape != other.shape) or (self.shape[0] != self.shape[1]):
             raise NotImplementedError("Multiplication of matrices with diferrent shapes or not quadratic matrices isn't implemented yet")
             # TODO
-        erg = np.zeros(self.Shape)
-        for index1 in range(self.Shape[1]):         # iterating throug rows of first matix, using Shape to get count of rows
-            for index2 in range(other.Shape[0]):    # iterating throug columns of second matrix, using Shape, to get the count of colums
-                for pos in range(self.Shape[0]):    # iterating throug elems in rows of first natrix and colums of second matix
+        erg = np.zeros(self.shape)
+        for index1 in range(self.shape[1]):         # iterating throug rows of first matix, using Shape to get count of rows
+            for index2 in range(other.shape[0]):    # iterating throug columns of second matrix, using Shape, to get the count of colums
+                for pos in range(self.shape[0]):    # iterating throug elems in rows of first natrix and colums of second matix
                     erg[index2][index1] += \
                         self.__data[pos][index1] * \
                         other.__data[index2][pos]
         return erg
     def use(self, other: vector) -> vector:
-        input_dim = self.Shape[1] # The dimension of the input vector
+        input_dim = self.shape[1] # The dimension of the input vector
         if other.dimensions != input_dim:
             raise ValueError(
-                'Unable to use a matrix of shape ' + self.Shape +
+                'Unable to use a matrix of shape ' + self.shape +
                 ' on a vector with ' + other.dimensions + ' dimensions'
             )
-        output_dim = self.Shape[0] # the dimension of the output vector
+        output_dim = self.shape[0] # the dimension of the output vector
         erg = [0 for n in range(output_dim)]
         for result_index in range(output_dim):
             erg[result_index] = [0 for n in range(input_dim)]
@@ -110,6 +162,51 @@ class matrix:
         return vector(erg)
     def getr(self):
         return self.__data
+
+'''creates a vector leading from start to tip'''
+def vbp(start: point, tip: point, normalize: bool = False):
+    erg = vector(tip - start)
+    if normalize:
+        return erg.normalize()
+    else:
+        return erg
+
+def createRotationMatrixX(angle):
+    m = matrix((4, 4))
+    s = sin(angle)
+    c = cos(angle)
+    m[0, 0] = 1
+    m[1, 1] = c
+    m[1, 2] = -s
+    m[2, 1] = s
+    m[2, 2] = c
+    m[3, 3] = 1
+    return m
+
+def createRotationMatrixY(angle):
+    m = matrix((4, 4))
+    s = sin(angle)
+    c = cos(angle)
+    m[0, 0] = c
+    m[0, 2] = s
+    m[1, 1] = 1
+    m[2, 0] = -s
+    m[2, 2] = c
+    m[3, 3] = 1
+
+
+def createRotationMatrixZ(angle):
+    m = matrix((4, 4))
+    s = sin(angle)
+    c = cos(angle)
+    m[0, 0] = c
+    m[0, 1] = -s
+    m[1, 0] = s
+    m[1, 1] = c
+    m[2, 2] = 1
+    m[3, 3] = 1
+
+
 
 
 class Vector3D:

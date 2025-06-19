@@ -1,4 +1,4 @@
-from main import * 
+from main import *
 
 class Camera:
     def __init__(self, position: point, orientation: vector, target: point = None):
@@ -8,7 +8,30 @@ class Camera:
         self.orientation_ = orientation
         self.target_ = target
     '''changes the rotation of the camera to watch the given target from its current position'''
-    def target(self, target: point):
+    def target(self, target: point): # roll is not affected by that
         self.target_ = target
-        direction = self.position_.vectorTo()
-
+        direction = vbp(self.orientation_, target, True)
+        yaw = atan(direction[0]/direction[2]) # = atan(x/z)
+        direction_in_x_z_plane = vector(        # the vector pointing into the direction of direction 
+            [direction[0], 0, direction[2]]
+        ).normalize()
+        pitch = direction.angleToVector(direction_in_x_z_plane)
+        if direction[2] < 0:    # add orientation, cause angleToVector always returns positive values
+            pitch = -pitch
+        self.orientation_[0] = yaw
+        self.orientation_[1] = pitch
+    def getCameraTransformMatrix(self):
+        # my yaw pitch and roll is an intrinsic rotation by y-axis, x-axis, z-axis
+        translation = matrix((4, 4))
+        translation[0, 0] = 1
+        translation[1, 1] = 1
+        translation[2, 2] = 1
+        translation[3, 3] = 1
+        for index, val in zip(range(4), -self.position_):
+            translation[index, 3] = val
+        result = \
+            ((translation * \
+            createRotationMatrixY(self.orientation_[0])) * \
+            createRotationMatrixX(self.orientation_[1])) * \
+            createRotationMatrixZ(self.orientation_[2])
+        return result
