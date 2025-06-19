@@ -12,6 +12,8 @@ class Camera:
         self.target_ = target
         direction = vbp(self.orientation_, target, True)
         yaw = atan(direction[0]/direction[2]) # = atan(x/z)
+        # TODO: Test wether it works with z = 0. if not, if condition testing wether z = 0
+        # and raising an error then (camera inside of target)
         direction_in_x_z_plane = vector(        # the vector pointing into the direction of direction 
             [direction[0], 0, direction[2]]
         ).normalize()
