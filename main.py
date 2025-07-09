@@ -226,7 +226,9 @@ class Vector3D:
         z = self.Z - other.Z
         return Vector3D(x, y, z)
     def morph(self):
-        return Vector([self.X, self.Y, self.Z])
+        return base([self.X, self.Y, self.Z])
+    def homogenous(self, last_cord = 1):
+        return base([self.X, self.Y, self.Z, last_cord])
     def scale(self, scalar: float):
         x = self.X * scalar
         y = self.Y * scalar
