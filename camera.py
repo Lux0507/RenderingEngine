@@ -1,12 +1,12 @@
 from main import *
 
 class Camera:
-    def __init__(self, position: point, orientation: vector, target: point = None):
+    def __init__(self, position: point = point([0, 0, 0]), orientation: vector = vector([0, 0, 0]), target: point = None):
         # the position as pair of three cartesian coordinates
-        self.position_ = position
+        self.position_: point = position
         # the orientation in tait-bryan angles (yaw, pitch, roll)
-        self.orientation_ = orientation
-        self.target_ = target
+        self.orientation_: vector = orientation
+        self.target_: point = target
     '''changes the rotation of the camera to watch the given target from its current position'''
     def target(self, target: point): # roll is not affected by that
         self.target_ = target
@@ -31,9 +31,8 @@ class Camera:
         translation[3, 3] = 1
         for index, val in zip(range(4), -self.position_):
             translation[index, 3] = val
-        result = \
-            ((translation * \
-            createRotationMatrixY(self.orientation_[0])) * \
-            createRotationMatrixX(self.orientation_[1])) * \
-            createRotationMatrixZ(self.orientation_[2])
+        result = (( translation * \
+                    createRotationMatrixY(self.orientation_[0])) * \
+                    createRotationMatrixX(self.orientation_[1])) * \
+                    createRotationMatrixZ(self.orientation_[2])
         return result

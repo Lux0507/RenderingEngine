@@ -5,54 +5,62 @@ from math import *
 class base:
     def __init__(self, data: list):
         self.dimensions = len(data)
-        self.__data = np.ndarray(data)
+        self.data = np.array(data)
         self.__curr = 0
         self.__end = self.dimensions
-    def __init__(self, data: np.ndarray):
-        if len(data.shape) != 1:
-            raise ValueError(
-                'Unable to create a vector out of an array of shape ' +
-                data.shape +
-                ', too much dimensions.'
-                )
+    # def __init__(self, data: np.ndarray):
+    #     if len(data.shape) != 1:
+    #         raise ValueError(
+    #             'Unable to create a vector out of an array of shape ' +
+    #             data.shape +
+    #             ', too much dimensions.'
+    #             )
+    def __len__(self):
+        return len(self.data)
     def __getitem__(self, key: int):
-        if len(self.__data) <= key:
+        if len(self.data) <= key:
             return None
-        return self.__data[key]
+        return self.data[key]
+    def __setitem__(self, key: int, value):
+        if len(self.data) <= key:
+            raise IndexError("Can't write out of index")
+        self.data[key] = value
     def __iter__(self):
         return self
     def __next__(self):
         if self.__curr >= self.__end:
             raise StopIteration
-        result = self.__data[self.__curr]
+        result = self.data[self.__curr]
         self.__curr += 1
         return result
     def __neg__(self):
-        return base(self.__data * -1)
+        res = [-elem for elem in self.data]
+        return base(res)
     def __add__(self, other):
         if self.dimensions != other.dimensions:
             raise ValueError(
                 "Can't add two vectors with different dimensions"
             )
-        return base(self.__data + other.__data)
+        return base(self.data + other.__data)
     def __sub__(self, other):
         if self.dimensions != other.dimensions:
             raise ValueError(
                 "Can't add two vectors with different dimensions"
             )
-        return base(self.__data - other.__data)
+        return base(self.data - other.__data)
     def scale(self, factor):
-        return base(self.__data * factor) # multipliing a list with a scalar
+        return base(self.data * factor) # multipliing a list with a scalar
+    '''removes one dimension of coordinates by applying pinhole camera projection'''
+
 
 point = base
 
 class vector(base):
-    def __init__(self, data):
+    def __init__(self, data: list):
         super().__init__(data)
-        self.magnitude = self.__magnitude()
-    def __magnitude(self):
+    def magnitude(self):
         sum = 0
-        for elem in self.__data:
+        for elem in self.data:
             sum += elem ** 2
         return sqrt(sum)
     def __mul__(self, other):
@@ -83,13 +91,21 @@ class vector(base):
         if self.dimensions != point.dimensions:
             raise ValueError() # TODO
         return point(point + self)
+    def project(self):
+        res = []
+        for num in range(self.dimensions - 1):
+            res.append(
+                self.data[num]/self.data[-1]
+            )
+        return res
 
 class matrix:
-    def __init__(self, matrix: np.ndarray):
-        self.shape = matrix.shape
-        self.__data = matrix
-        self.__curr = 0
-        self.__end = self.shape[0]
+    @classmethod
+    def fromData(cls, matrix: np.ndarray):
+        cls.shape = matrix.shape
+        cls.__data = matrix
+        cls.__curr = 0
+        cls.__end = matrix.shape[0]
     def __init__(self, shape: tuple):
         self.shape: tuple = shape
         self.__data: np.ndarray = np.zeros(shape)
@@ -138,11 +154,11 @@ class matrix:
         if (self.shape != other.shape) or (self.shape[0] != self.shape[1]):
             raise NotImplementedError("Multiplication of matrices with diferrent shapes or not quadratic matrices isn't implemented yet")
             # TODO
-        erg = np.zeros(self.shape)
+        erg = matrix(self.shape)
         for index1 in range(self.shape[1]):         # iterating throug rows of first matix, using Shape to get count of rows
             for index2 in range(other.shape[0]):    # iterating throug columns of second matrix, using Shape, to get the count of colums
                 for pos in range(self.shape[0]):    # iterating throug elems in rows of first natrix and colums of second matix
-                    erg[index2][index1] += \
+                    erg[index2, index1] += \
                         self.__data[pos][index1] * \
                         other.__data[index2][pos]
         return erg
@@ -154,9 +170,8 @@ class matrix:
                 ' on a vector with ' + other.dimensions + ' dimensions'
             )
         output_dim = self.shape[0] # the dimension of the output vector
-        erg = [0 for n in range(output_dim)]
+        erg = vector([0 for n in range(output_dim)])
         for result_index in range(output_dim):
-            erg[result_index] = [0 for n in range(input_dim)]
             for index in range(input_dim):
                 erg[result_index] += other[index] * self.__data[result_index][index]
         return vector(erg)
@@ -170,6 +185,11 @@ def vbp(start: point, tip: point, normalize: bool = False):
         return erg.normalize()
     else:
         return erg
+
+def create(vector: base):
+    if len(vector) != 3:
+        raise ValueError("'Unable to create Vector3D. input vector has wrong amount of dimensions")
+    return Vector3D(*vector)
 
 def createRotationMatrixX(angle):
     m = matrix((4, 4))
@@ -193,7 +213,7 @@ def createRotationMatrixY(angle):
     m[2, 0] = -s
     m[2, 2] = c
     m[3, 3] = 1
-
+    return m
 
 def createRotationMatrixZ(angle):
     m = matrix((4, 4))
@@ -205,6 +225,7 @@ def createRotationMatrixZ(angle):
     m[1, 1] = c
     m[2, 2] = 1
     m[3, 3] = 1
+    return m
 
 
 
@@ -225,8 +246,10 @@ class Vector3D:
         y = self.Y - other.Y
         z = self.Z - other.Z
         return Vector3D(x, y, z)
+    '''Morphes the Vector3D into a base element'''
     def morph(self):
         return base([self.X, self.Y, self.Z])
+    '''gives the Vector3D in homogenous coordinates'''
     def homogenous(self, last_cord = 1):
         return base([self.X, self.Y, self.Z, last_cord])
     def scale(self, scalar: float):
@@ -242,6 +265,10 @@ class Vector3D:
     def scalarProd(self, other) -> float:
         erg = self.X * other.X + self.Y * other.Y + self.Z - other.Z
         return erg
+    def project(self, deepest_z):
+        return base(
+            [self.X / self.Z, self.Y / self.Z, self.Z / deepest_z]
+        )
 
 
 
