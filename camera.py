@@ -1,4 +1,4 @@
-from main import *
+from base import *
 
 class Camera:
     def __init__(self, position: point = point([0, 0, 0]), orientation: vector = vector([0, 0, 0]), target: point = None):

@@ -1,4 +1,4 @@
-from main import *
+from base import *
 
 class MObject:
     def __init__(self, points: tuple[Point3D] = (), connections: list[tuple[float]] = []):
