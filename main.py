@@ -5,52 +5,89 @@ from math import *
 class base:
     def __init__(self, data: list):
         self.dimensions = len(data)
-        self.data = np.array(data)
+        self.__data = np.array(data)
         self.__curr = 0
         self.__end = self.dimensions
-    # def __init__(self, data: np.ndarray):
-    #     if len(data.shape) != 1:
-    #         raise ValueError(
-    #             'Unable to create a vector out of an array of shape ' +
-    #             data.shape +
-    #             ', too much dimensions.'
-    #             )
+    @staticmethod
+    def fromNumpy(data: np.ndarray):
+        if len(data.shape) != 1:
+            raise ValueError(
+                'Unable to create a vector out of an array of shape ' +
+                data.shape +
+                ', too much dimensions.'
+                )
+        return base(data.tolist())
     def __len__(self):
-        return len(self.data)
+        return len(self.__data)
     def __getitem__(self, key: int):
-        if len(self.data) <= key:
-            return None
-        return self.data[key]
+        if key > (len(self.__data) - 1) or key < 0:
+            raise IndexError("Index out of range")
+        else:
+            return self.__data[key]
     def __setitem__(self, key: int, value):
-        if len(self.data) <= key:
+        if len(self.__data) <= key:
             raise IndexError("Can't write out of index")
-        self.data[key] = value
+        self.__data[key] = value
     def __iter__(self):
         return self
     def __next__(self):
         if self.__curr >= self.__end:
             raise StopIteration
-        result = self.data[self.__curr]
+        result = self.__data[self.__curr]
         self.__curr += 1
         return result
     def __neg__(self):
-        res = [-elem for elem in self.data]
+        res = [-elem for elem in self.__data]
         return base(res)
     def __add__(self, other):
         if self.dimensions != other.dimensions:
             raise ValueError(
                 "Can't add two vectors with different dimensions"
             )
-        return base(self.data + other.__data)
+        return base(self.__data + other.__data)
     def __sub__(self, other):
         if self.dimensions != other.dimensions:
             raise ValueError(
                 "Can't add two vectors with different dimensions"
             )
-        return base(self.data - other.__data)
+        return base(self.__data - other.__data)
     def scale(self, factor):
-        return base(self.data * factor) # multipliing a list with a scalar
-    '''removes one dimension of coordinates by applying pinhole camera projection'''
+        return base(self.__data * factor) # multipliing a list with a scalar
+    def project(self):
+        """projects the vector/point onto the plane wich is defined by the equation 'last = 1'
+        So for three dimensions, it projects the vector/points onto z = 1
+
+        Returns:
+            _type_: the projected vector/point with one less dimension
+        """
+        res = []
+        for num in range(self.dimensions - 1):
+            res.append(
+                self.__data[num]/self.__data[-1]
+            )
+        return base(res)
+    def homogenous(self, plane = 1):
+        """Add one dimension to this point/vector to be able to perform translations by matrix multiplication.
+
+        Args:
+            plane (int, optional): The plane of the higher dimension to settle the point. Defaults to 1.
+
+        Returns:
+            _type_: The homogenous representation for the point/vector
+        """
+        new_data = np.append(self.__data, plane)
+        return self.fromNumpy(new_data)
+    def pinholeProject(self, deepest_z):
+        res = []
+        for index in range(self.dimensions):
+            # for all elements except the last: divide by last element
+            if index != self.dimensions - 1:
+                res.append(self.__data[index]/self.__data[-1])
+            # for the last element: divide by deepest_z and keep depth information
+            else:
+                res.append(self.__data[index]/deepest_z)
+        return base[res]
+        
 
 
 point = base
@@ -60,7 +97,7 @@ class vector(base):
         super().__init__(data)
     def magnitude(self):
         sum = 0
-        for elem in self.data:
+        for elem in self.__data:
             sum += elem ** 2
         return sqrt(sum)
     def __mul__(self, other):
@@ -91,21 +128,13 @@ class vector(base):
         if self.dimensions != point.dimensions:
             raise ValueError() # TODO
         return point(point + self)
-    def project(self):
-        res = []
-        for num in range(self.dimensions - 1):
-            res.append(
-                self.data[num]/self.data[-1]
-            )
-        return res
 
 class matrix:
-    @classmethod
-    def fromData(cls, matrix: np.ndarray):
-        cls.shape = matrix.shape
-        cls.__data = matrix
-        cls.__curr = 0
-        cls.__end = matrix.shape[0]
+    @staticmethod
+    def fromData(matrix_: np.ndarray):
+        m = matrix(matrix_.shape)
+        m.__data = matrix_
+        return m
     def __init__(self, shape: tuple):
         self.shape: tuple = shape
         self.__data: np.ndarray = np.zeros(shape)
@@ -162,7 +191,7 @@ class matrix:
                         self.__data[pos][index1] * \
                         other.__data[index2][pos]
         return erg
-    def use(self, other: vector) -> vector:
+    def use(self, other: base) -> base:
         input_dim = self.shape[1] # The dimension of the input vector
         if other.dimensions != input_dim:
             raise ValueError(
@@ -170,16 +199,26 @@ class matrix:
                 ' on a vector with ' + other.dimensions + ' dimensions'
             )
         output_dim = self.shape[0] # the dimension of the output vector
-        erg = vector([0 for n in range(output_dim)])
+        erg = base([0 for n in range(output_dim)])
         for result_index in range(output_dim):
             for index in range(input_dim):
                 erg[result_index] += other[index] * self.__data[result_index][index]
-        return vector(erg)
+        return base(erg)
     def getr(self):
         return self.__data
 
-'''creates a vector leading from start to tip'''
+
 def vbp(start: point, tip: point, normalize: bool = False):
+    """creates a vector between points
+
+    Args:
+        start (point): the point where the vector should start
+        tip (point): the point where the vector should end
+        normalize (bool, optional): Wether the vector to return should be normalized. Defaults to False.
+
+    Returns:
+        _type_: a vector pointing from start into the direction of end, either normalized or not
+    """
     erg = vector(tip - start)
     if normalize:
         return erg.normalize()
@@ -249,9 +288,6 @@ class Vector3D:
     '''Morphes the Vector3D into a base element'''
     def morph(self):
         return base([self.X, self.Y, self.Z])
-    '''gives the Vector3D in homogenous coordinates'''
-    def homogenous(self, last_cord = 1):
-        return base([self.X, self.Y, self.Z, last_cord])
     def scale(self, scalar: float):
         x = self.X * scalar
         y = self.Y * scalar
@@ -265,12 +301,15 @@ class Vector3D:
     def scalarProd(self, other) -> float:
         erg = self.X * other.X + self.Y * other.Y + self.Z - other.Z
         return erg
-    def project(self, deepest_z):
-        return base(
-            [self.X / self.Z, self.Y / self.Z, self.Z / deepest_z]
-        )
 
-
+class Point3D:
+    def __init__(self, x: float, y: float, z: float):
+        self.X = x
+        self.Y = y
+        self.Z = z
+    '''returns the coordinates of the point as a tuple of (x, y, z)'''
+    def get(self) -> tuple[float]:
+        return (self.X, self.Y, self.Z)
 
 
 
