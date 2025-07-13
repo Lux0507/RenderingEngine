@@ -20,10 +20,10 @@ class base:
     def __len__(self):
         return len(self.__data)
     def __getitem__(self, key: int):
-        if key > (len(self.__data) - 1) or key < 0:
-            raise IndexError("Index out of range")
-        else:
-            return self.__data[key]
+        # if key > (len(self.__data) - 1) or key < 0:
+        #     raise IndexError("Index out of range")
+        # else:
+        return self.__data[key]
     def __setitem__(self, key: int, value):
         if len(self.__data) <= key:
             raise IndexError("Can't write out of index")
@@ -51,8 +51,21 @@ class base:
                 "Can't add two vectors with different dimensions"
             )
         return base(self.__data - other.__data)
-    def scale(self, factor):
-        return base(self.__data * factor) # multipliing a list with a scalar
+    def scale(self, factor, scale_last: bool = True):
+        """scale each element of the vector/point by a scalar.
+        Can be used to scale each element except the last
+
+        Args:
+            factor (_type_): the factor to scale with
+            scale_last (bool, optional): wether to apply the scaling onto the last element. Defaults to True.
+
+        Returns:
+            _type_: the scaled vector/point
+        """
+        new_data = self.__data * factor # multipliing a list with a scalar
+        if not scale_last:
+            new_data[-1] = self.__data[-1]
+        return base(new_data) 
     def project(self):
         """projects the vector/point onto the plane wich is defined by the equation 'last = 1'
         So for three dimensions, it projects the vector/points onto z = 1
@@ -86,7 +99,7 @@ class base:
             # for the last element: divide by deepest_z and keep depth information
             else:
                 res.append(self.__data[index]/deepest_z)
-        return base[res]
+        return base(res)
         
 
 
@@ -266,7 +279,12 @@ def createRotationMatrixZ(angle):
     m[3, 3] = 1
     return m
 
-
+def round(num: float) -> int:
+    decimal_places = num - int(num)
+    if decimal_places < 0.5:
+        return int(num)
+    else:
+        return int(num) + 1
 
 
 class Vector3D:
@@ -311,27 +329,3 @@ class Point3D:
     def get(self) -> tuple[float]:
         return (self.X, self.Y, self.Z)
 
-
-
-
-
-
-
-
-# class matrix3x3:
-#     def __init__(self, matrix: np.ndarray):
-#         if matrix.shape != (3, 3):
-#             raise ValueError(
-#                 'Unable to create a 3x3 matrix out of a array of shape ' + matrix.shape
-#                 )
-#         self.Shape = (3, 3)
-#         self.__data = matrix
-#     def __mul__(self, other: vector):
-#         if other.Dimensions != 3:
-#             raise ValueError('Can\'t use a 3x3 matrix on a vector of ' + other.Dimensions + ' dimensions')
-#         erg = [0 for n in range(3)]
-#         for result_index in range(3):
-#             erg[result_index] = [0 for n in range(3)]
-#             for index in range(3):
-#                 erg[result_index] += other[index] * self.__data[result_index][index]
-#         return vector(erg)
