@@ -1,6 +1,8 @@
 from Scene import *
 
-myScene = Scene(camera_position=(0, 0, -4))
+myScene = Scene(camera_position=(0, 0, 4))
+myScene.Camera.orientation_ = (PI, 0, 0)
+# TODO: pitch does not work, yaw and roll work fine
 myScene.add(
     MObject(
         (Point3D(0, 0, 0),
@@ -10,6 +12,7 @@ myScene.add(
     )
 )
 myScene.render()
+
 
 # py.init()
 

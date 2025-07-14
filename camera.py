@@ -32,7 +32,7 @@ class Camera:
         for index, val in zip(range(4), -self.position_):
             translation[index, 3] = val
         result = (( translation * \
-                    createRotationMatrixY(self.orientation_[0])) * \
+                    createRotationMatrixZ(self.orientation_[2])) * \
                     createRotationMatrixX(self.orientation_[1])) * \
-                    createRotationMatrixZ(self.orientation_[2])
+                    createRotationMatrixY(self.orientation_[0])
         return result
