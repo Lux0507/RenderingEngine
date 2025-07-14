@@ -1,6 +1,7 @@
 import numpy as np
 from math import * 
 
+PI = radians(180)
 
 class base:
     def __init__(self, data: list):
@@ -215,7 +216,7 @@ class matrix:
         erg = base([0 for n in range(output_dim)])
         for result_index in range(output_dim):
             for index in range(input_dim):
-                erg[result_index] += other[index] * self.__data[result_index][index]
+                erg[result_index] += (other[index] * self.__data[result_index][index])
         return base(erg)
     def getr(self):
         return self.__data
@@ -246,7 +247,19 @@ def create(vector: base):
 def createRotationMatrixX(angle):
     m = matrix((4, 4))
     s = sin(angle)
+    if isclose(s, 0.0, abs_tol=1e-12):
+        s = 0.0
+    if isclose(s, 1.0, abs_tol=1e-12):
+        s = 1.0
+    if isclose(s, -1., abs_tol=1e-120):
+        s = -1.0
     c = cos(angle)
+    if isclose(c, 0.0, abs_tol=1e-12):
+        c = 0.0
+    if isclose(c, 1.0, abs_tol=1e-12):
+        c = 1.0
+    if isclose(c, -1., abs_tol=1e-120):
+        c = -1.0
     m[0, 0] = 1
     m[1, 1] = c
     m[1, 2] = -s
@@ -258,7 +271,19 @@ def createRotationMatrixX(angle):
 def createRotationMatrixY(angle):
     m = matrix((4, 4))
     s = sin(angle)
+    if isclose(s, 0.0, abs_tol=1e-12):
+        s = 0.0
+    if isclose(s, 1.0, abs_tol=1e-12):
+        s = 1.0
+    if isclose(s, -1., abs_tol=1e-120):
+        s = -1.0
     c = cos(angle)
+    if isclose(c, 0.0, abs_tol=1e-12):
+        c = 0.0
+    if isclose(c, 1.0, abs_tol=1e-12):
+        c = 1.0
+    if isclose(c, -1., abs_tol=1e-120):
+        c = -1.0
     m[0, 0] = c
     m[0, 2] = s
     m[1, 1] = 1
@@ -270,7 +295,19 @@ def createRotationMatrixY(angle):
 def createRotationMatrixZ(angle):
     m = matrix((4, 4))
     s = sin(angle)
+    if isclose(s, 0.0, abs_tol=1e-12):
+        s = 0.0
+    if isclose(s, 1.0, abs_tol=1e-12):
+        s = 1.0
+    if isclose(s, -1., abs_tol=1e-120):
+        s = -1.0
     c = cos(angle)
+    if isclose(c, 0.0, abs_tol=1e-12):
+        c = 0.0
+    if isclose(c, 1.0, abs_tol=1e-12):
+        c = 1.0
+    if isclose(c, -1., abs_tol=1e-120):
+        c = -1.0
     m[0, 0] = c
     m[0, 1] = -s
     m[1, 0] = s
