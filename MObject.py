@@ -15,7 +15,6 @@ class MObject:
             ValueError: When index in connections argument out of range
         """
         self.Points: list[base] = []
-        self.Am_Points = len(points)
         for point in points:
             self.Points.append( base(point.get()) )
         MObject.__ConnsValidation(self.Points, connections)

@@ -52,6 +52,15 @@ class base:
                 "Can't add two vectors with different dimensions"
             )
         return base(self.__data - other.__data)
+    def __str__(self):
+        res = "["
+        for index in range(len(self.__data)):
+            res += str(self.__data[index])
+            if index != len(self.__data) - 1:
+                res += ", "
+            else:
+                res +="]"
+        return res
     def scale(self, factor, scale_last: bool = True):
         """scale each element of the vector/point by a scalar.
         Can be used to scale each element except the last
@@ -152,6 +161,12 @@ class matrix:
     def __init__(self, shape: tuple):
         self.shape: tuple = shape
         self.__data: np.ndarray = np.zeros(shape)
+    @staticmethod
+    def unitMatrix(shape: tuple):
+        m = matrix(shape)
+        for num in range(min(shape[0], shape[1])): # for non-square matrices
+            m[num, num] = 1
+        return m
     def __getitem__(self, index):
         if type(index) != tuple: # No tuple as argument
             raise TypeError(
@@ -187,6 +202,28 @@ class matrix:
         result = self.__data[self.__curr]
         self.__curr += 1
         return result
+    def __str__(self):
+        res = ""
+        for rowindex in range(self.shape[0]):
+            if rowindex == 0:
+                res += "⌈"
+            elif rowindex == self.shape[0] - 1:
+                res += "⌊"
+            else:
+                res += "|"
+            for columnindex in range(self.shape[1]):
+                res += str(self.__data[rowindex, columnindex])
+                if columnindex != self.shape[1] - 1:
+                    res += ", "
+                else:
+                    if rowindex == 0:
+                        res += "⌉"
+                    elif rowindex == self.shape[0] - 1:
+                        res += "⌋"
+                    else:
+                        res += "|"
+            res += "\n"
+        return res
     def __mul__(self, other):
         if type(other) != matrix:
             raise TypeError(
@@ -196,15 +233,18 @@ class matrix:
             )
         if (self.shape != other.shape) or (self.shape[0] != self.shape[1]):
             raise NotImplementedError("Multiplication of matrices with diferrent shapes or not quadratic matrices isn't implemented yet")
-            # TODO
+            # TODO self.shape[1] == other.shape[0]
         erg = matrix(self.shape)
-        for index1 in range(self.shape[1]):         # iterating throug rows of first matix, using Shape to get count of rows
-            for index2 in range(other.shape[0]):    # iterating throug columns of second matrix, using Shape, to get the count of colums
-                for pos in range(self.shape[0]):    # iterating throug elems in rows of first natrix and colums of second matix
+        for index1 in range(other.shape[1]):         # iterating throug colums of right matix, using Shape to get count of colums
+            for index2 in range(self.shape[0]):    # iterating throug rows of left matrix, using Shape, to get the count of rows
+                for pos in range(other.shape[0]):    # iterating throug elems in colums of right natrix and rows of left matix
                     erg[index2, index1] += \
-                        self.__data[pos][index1] * \
-                        other.__data[index2][pos]
+                        self.__data[index2][pos] * \
+                        other.__data[pos][index1]
         return erg
+    def __rmul__(self, other):
+        # TODO
+        pass
     def use(self, other: base) -> base:
         input_dim = self.shape[1] # The dimension of the input vector
         if other.dimensions != input_dim:
@@ -213,10 +253,10 @@ class matrix:
                 ' on a vector with ' + other.dimensions + ' dimensions'
             )
         output_dim = self.shape[0] # the dimension of the output vector
-        erg = base([0 for n in range(output_dim)])
+        erg = base([0.0 for n in range(output_dim)])
         for result_index in range(output_dim):
             for index in range(input_dim):
-                erg[result_index] += (other[index] * self.__data[result_index][index])
+                erg[result_index] += other[index] * self.__data[result_index][index]
         return base(erg)
     def getr(self):
         return self.__data
@@ -245,78 +285,109 @@ def create(vector: base):
     return Vector3D(*vector)
 
 def createRotationMatrixX(angle):
-    m = matrix((4, 4))
+    """generates a 4x4 matrix, that rotates each point in a left-handed coordinate system
+    by angle (in radians) counterclockwise (when facing the origin from positive x-axis) around the x-axis
+
+    Args:
+        angle (_type_): the angle to rotate by in radians
+
+    Returns:
+        _type_: the rotation matrix
+    """
+    m = matrix.unitMatrix((4, 4))
     s = sin(angle)
     if isclose(s, 0.0, abs_tol=1e-12):
         s = 0.0
     if isclose(s, 1.0, abs_tol=1e-12):
         s = 1.0
-    if isclose(s, -1., abs_tol=1e-120):
+    if isclose(s, -1., abs_tol=1e-12):
         s = -1.0
     c = cos(angle)
     if isclose(c, 0.0, abs_tol=1e-12):
         c = 0.0
     if isclose(c, 1.0, abs_tol=1e-12):
         c = 1.0
-    if isclose(c, -1., abs_tol=1e-120):
+    if isclose(c, -1., abs_tol=1e-12):
         c = -1.0
-    m[0, 0] = 1
     m[1, 1] = c
-    m[1, 2] = -s
-    m[2, 1] = s
+    m[1, 2] = s
+    m[2, 1] = -s
     m[2, 2] = c
-    m[3, 3] = 1
     return m
 
 def createRotationMatrixY(angle):
-    m = matrix((4, 4))
+    """generates a 4x4 matrix, that rotates each point in a left-handed coordinate system
+    by angle (in radians) counterclockwise (when facing the origin from positive y-axis) around the y-axis
+    
+
+    Args:
+        angle (_type_): the angle to rotate by in radians
+
+    Returns:
+        _type_: the rotation matrix
+    """
+    # switched -sin and sin -> left handed 
+    m = matrix.unitMatrix((4, 4))
     s = sin(angle)
     if isclose(s, 0.0, abs_tol=1e-12):
         s = 0.0
     if isclose(s, 1.0, abs_tol=1e-12):
         s = 1.0
-    if isclose(s, -1., abs_tol=1e-120):
+    if isclose(s, -1., abs_tol=1e-12):
         s = -1.0
     c = cos(angle)
     if isclose(c, 0.0, abs_tol=1e-12):
         c = 0.0
     if isclose(c, 1.0, abs_tol=1e-12):
         c = 1.0
-    if isclose(c, -1., abs_tol=1e-120):
+    if isclose(c, -1., abs_tol=1e-12):
         c = -1.0
     m[0, 0] = c
-    m[0, 2] = s
-    m[1, 1] = 1
-    m[2, 0] = -s
+    m[0, 2] = -s
+    m[2, 0] = s
     m[2, 2] = c
-    m[3, 3] = 1
     return m
 
 def createRotationMatrixZ(angle):
-    m = matrix((4, 4))
+    """generates a 4x4 matrix, that rotates each point in a left-handed coordinate system
+    by angle (in radians) counterclockwise (when facing the origin from positive z-axis) around the z-axis
+
+    Args:
+        angle (_type_): the angle to rotate by in radians
+
+    Returns:
+        _type_: the rotation matrix
+    """
+    m = matrix.unitMatrix((4, 4))
     s = sin(angle)
     if isclose(s, 0.0, abs_tol=1e-12):
         s = 0.0
     if isclose(s, 1.0, abs_tol=1e-12):
         s = 1.0
-    if isclose(s, -1., abs_tol=1e-120):
+    if isclose(s, -1., abs_tol=1e-12):
         s = -1.0
     c = cos(angle)
     if isclose(c, 0.0, abs_tol=1e-12):
         c = 0.0
     if isclose(c, 1.0, abs_tol=1e-12):
         c = 1.0
-    if isclose(c, -1., abs_tol=1e-120):
+    if isclose(c, -1., abs_tol=1e-12):
         c = -1.0
     m[0, 0] = c
-    m[0, 1] = -s
-    m[1, 0] = s
+    m[0, 1] = s
+    m[1, 0] = -s
     m[1, 1] = c
-    m[2, 2] = 1
-    m[3, 3] = 1
     return m
 
 def round(num: float) -> int:
+    """rounds the given decimal number to an integer.
+
+    Args:
+        num (float): the decimal number to round
+
+    Returns:
+        int: the rounded decimal as integer 
+    """
     decimal_places = num - int(num)
     if decimal_places < 0.5:
         return int(num)

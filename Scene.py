@@ -2,7 +2,13 @@ from camera import *
 from MObject import *
 import pygame as py
 
+# TODO
+# - rasterization for abs(diff_x) < 1
+# - rasterization for both points being outside
+# - maybe render everything, even though its outside, connections still might be in. (except stuff behind camera)
+
 class Scene:
+    # left handed coordinate system!
     def __init__(self, fov = 1.0, camera_position = (0, 0, 0), screen_width = 1600, screen_ratio = (16, 9)):
         self.ScreenSize: tuple[int] = (screen_width, screen_width * (screen_ratio[1] / screen_ratio[0]))
         self.ScreenRatio = screen_ratio
@@ -94,37 +100,27 @@ class Scene:
             
             # rasterize
             for conn in obj.Conns:
-                # check which of both points is inside, for cutt offs
-                # TODO maybe auslagern...
-                first_inside = self.__isInside(obj.Points[conn[0]])
-                second_inside = self.__isInside(obj.Points[conn[1]])
-                points: list[base] = []
-                # sort points, so that the point inside is at index 0
-                if (not first_inside) and (not second_inside):
-                    # both outside, no connection needed
+                points = self.__SortConn(obj.Points[conn[0]], obj.Points[conn[1]])
+                if len(points) == 0:
+                    # need to check wether line is inside at some point!
                     continue
-                elif (not first_inside) and second_inside:
-                    points = [obj.Points[conn[1]], obj.Points[conn[0]]]
-                elif first_inside and (not second_inside):
-                    points = [obj.Points[conn[0]], obj.Points[conn[1]]]
-                else:
-                    # if both are inside take the one with smaller x at index 0
-                    if obj.Points[conn[0]][0] <= obj.Points[conn[1]][0]:
-                        points = [obj.Points[conn[0]], obj.Points[conn[1]]]
-                    else:
-                        points = [obj.Points[conn[1]], obj.Points[conn[0]]]
-
-                # rasterize
+                
                 diff_x = round(points[1][0] - points[0][0])
                 diff_y = round(points[1][1] - points[0][1])
+                
+                
                 if abs(diff_x) < 1:
-                    # no connection needs to be drawn, jump to next conn
-                    continue
+                    if abs(diff_y) < 1:
+                        # no connection needs to be drawn, jump to next conn
+                        continue
+                    else:
+                        # TODO: rasterization when diff_x < 1
+                        continue
                 m: float = diff_y / diff_x
                 for num in range(1, abs(diff_x)):
                     # num = 0 and num = diff_x are already drawn
                     # negate num, when rasterize from right to left (m is not negated on purpose here!)
-                    if diff_x > 0:
+                    if diff_x < 0:
                         num = -num
                     x = round(points[0][0] + num)
                     y = round(points[0][1] + num * m)
@@ -133,10 +129,7 @@ class Scene:
                         # no chance, that x and y are gonna be inside again, so jump to next conn
                         break
 
-                    self.Screen[
-                        round(points[0][0] + num), 
-                        round(points[0][1] + num * m)
-                    ] = obj.Color
+                    self.Screen[x, y] = obj.Color
                     
                     #TODO apply stoke_Width
                     # TODO very steep lines (diff_x = 0 or 1, but diff_y = 800)
@@ -158,6 +151,35 @@ class Scene:
         if point[1] >= self.ScreenSize[1] or point[1] < 0:
             result &= False
         return result      
+    def __SortConn(self, first: base, second: base):
+        """sorts the two projected points of a connection, 
+        so that the one being outside of the fov is placed at index 1.
+        That helps with the cutt offs during rasterization.
+        if both points are inside, the point with smaller x-value is placed at index 0
+        if both points are outside it returns an empty tuple
+
+        Args:
+            first (base): the first point of the connection
+            second (base): the second point of the connection
+
+        Returns:
+            _type_: a tuple of two point with the one being outside at index 1. empty, when both points are outside
+        """
+        firstInside = self.__isInside(first)
+        secondInside = self.__isInside(second)
+        if (not firstInside) and (not secondInside):
+            return ()
+        elif firstInside and (not secondInside):
+            return (first, second)
+        elif (not firstInside) and secondInside:
+            return (second, first)
+        else:
+            # if both inside place point with smaller x at index 0
+            if first[0] <= second[0]:
+                return (first, second)
+            else:
+                return (second, first)
+
 
     def render(self):
         py.init()

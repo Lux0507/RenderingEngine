@@ -24,15 +24,14 @@ class Camera:
         self.orientation_[1] = pitch
     def getCameraTransformMatrix(self):
         # my yaw pitch and roll is an intrinsic rotation by y-axis, x-axis, z-axis
-        translation = matrix((4, 4))
-        translation[0, 0] = 1
-        translation[1, 1] = 1
-        translation[2, 2] = 1
-        translation[3, 3] = 1
+        translation = matrix.unitMatrix((4, 4))
         for index, val in zip(range(4), -self.position_):
             translation[index, 3] = val
-        result = (( translation * \
-                    createRotationMatrixZ(self.orientation_[2])) * \
-                    createRotationMatrixX(self.orientation_[1])) * \
-                    createRotationMatrixY(self.orientation_[0])
+        # yaw pitch and roll is an extrinsic rotation around y-x'-z''
+        # converted to an intrinsic rotation we need to apply rotations around z-x-y in that order
+        # the position of translation in the multiplication doesn't matter, cause it doesn't influences the rotation.
+        result = createRotationMatrixY(-self.orientation_[0]) * \
+            (createRotationMatrixX(-self.orientation_[1]) * \
+            (createRotationMatrixZ(-self.orientation_[2]) * \
+             translation))
         return result

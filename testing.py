@@ -1,31 +1,33 @@
 from Scene import *
 
-myScene = Scene(camera_position=(0, 0, 4))
-myScene.Camera.orientation_ = (PI, 0, 0)
-# TODO: pitch does not work, yaw and roll work fine
-myScene.add(
-    MObject(
-        (Point3D(0, 0, 0),
-         Point3D(1, 1, 0),
-         Point3D(-1, 1, 0)),
-        [(0, 1), (0, 2), (1, 2)]
+
+def CameraTransformTest():
+    cam = Camera(point([0, 0, 0]))
+    cam.orientation_ = (0, 0, 0)
+    obj = MObject((
+        Point3D(0, 2, 0),
+        Point3D(0, 0, 2)),
+        [(0, 1)]
     )
-)
-myScene.render()
+    matrix = cam.getCameraTransformMatrix()
+    print(matrix)
+    transformed = obj.applyCameraTransform(matrix)
+    for p in transformed.Points:
+        print(p)
 
 
-# py.init()
+def SceneTest():
+    myScene = Scene(camera_position=(0, -4, 0))
+    myScene.Camera.orientation_ = (PI, PI/2, 0)
+    # TODO: pitch does not work, yaw and roll work fine
+    myScene.add(
+        MObject(
+            (Point3D(0, 2, 2),
+            Point3D(2, 2, 0),
+            Point3D(-2, 2, 0)),
+            [(0, 1), (0, 2), (1, 2)]
+        )
+    )
+    myScene.render()
 
-# screen = py.PixelArray(py.display.set_mode((1600, 900)))
-# screen[0:10, 0:10] = (255, 255, 255)
-# running = True
-
-# while running:
-#     for event in py.event.get():
-#         if event.type == py.QUIT:
-#             running = False
-#     # rendering
-    
-
-#     py.display.flip()
-# py.quit()
+# CameraTransformTest()
