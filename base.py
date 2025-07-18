@@ -37,6 +37,17 @@ class base:
         result = self.__data[self.__curr]
         self.__curr += 1
         return result
+    def __eq__(self, other):
+        if self.dimensions != other.dimensions:
+            return False
+        else:
+            return all([x == y for x, y in zip(self.__data, other.__data)])
+    def __lt__(self, other): # overload < operator for list sorting
+        for index in range(min(self.dimensions, other.dimensions)):
+            if self.__data[index] != other.__data[index]:
+                return self.__data[index] < other.__data[index]
+        # if each element equals each other
+        return False
     def __neg__(self):
         res = [-elem for elem in self.__data]
         return base(res)
@@ -61,6 +72,11 @@ class base:
             else:
                 res +="]"
         return res
+    def __repr__(self):
+        res = "base.base("
+        res += str(self)
+        res += ")"
+        return res
     def scale(self, factor, scale_last: bool = True):
         """scale each element of the vector/point by a scalar.
         Can be used to scale each element except the last
@@ -76,6 +92,58 @@ class base:
         if not scale_last:
             new_data[-1] = self.__data[-1]
         return base(new_data) 
+    def magnitude(self):
+        """considering this element being a vector pointing form the origin to the coordinates defined by this element,
+        this funtion computes the length of that vector (distance of the point)
+
+        Returns:
+            _type_: the magnitude of this vector
+        """
+        sum = 0
+        for elem in self.__data:
+            sum += elem ** 2
+        return sqrt(sum)
+    def normalize(self):
+        """normalizes this vector to a length of 1
+
+        Returns:
+            _type_: the normalized vector
+        """
+        return self.scale(1/self.magnitude)
+    def angleToVector(self, other):
+        """computes the angle from self to another vector given by other
+
+        Args:
+            other (_type_): the other vector defining the angle to compute
+
+        Returns:
+            _type_: the angle in radians
+        """
+        return abs(
+            acos(
+                self.dotProd(other) / \
+                (self.magnitude() * other.magnitude())
+            )
+        )
+    def dotProd(self, other):
+        if self.dimensions != other.dimensions:
+            raise ValueError("Can't compute dotProduct of vectors of different dimensions")
+        else:
+            sum = 0
+            for index in range(self.dimensions):
+                sum += self.__data[index] * other.__data[index]
+            return sum
+    def crossProd(self, other):
+        if (self.dimensions != 3) or (other.dimension != 3):
+            raise ValueError(
+                "cross product only works on vectors in three dimensions." +\
+                "Got vectors with dimensions " + self.dimensions + " and " +\
+                other.dimensions
+            )
+        else:
+            # TODO
+            pass
+    
     def project(self):
         """projects the vector/point onto the plane wich is defined by the equation 'last = 1'
         So for three dimensions, it projects the vector/points onto z = 1
@@ -110,47 +178,9 @@ class base:
             else:
                 res.append(self.__data[index]/deepest_z)
         return base(res)
-        
-
 
 point = base
-
-class vector(base):
-    def __init__(self, data: list):
-        super().__init__(data)
-    def magnitude(self):
-        sum = 0
-        for elem in self.__data:
-            sum += elem ** 2
-        return sqrt(sum)
-    def __mul__(self, other):
-        if type(other) == base:
-            return self.crossProd(other)
-        else:
-            return self.scale(other)
-    def normalize(self):
-        return self.scale(1/self.magnitude)
-    def dotProd(self, other):
-        pass
-    def crossProd(self, other):
-        if (self.dimensions !=3) or (other.dimension != 3):
-            raise ValueError(
-                "cross product only works on vectors in three dimensions." +\
-                "Got vectors with dimensions " + self.dimensions + " and " +\
-                other.dimensions
-            )
-
-    def angleToVector(self, other):
-        return abs(
-            acos(
-                self.dotProd(other) / \
-                (self.magnitude * other.magnitude)
-            )
-        )
-    def apply(self, point):
-        if self.dimensions != point.dimensions:
-            raise ValueError() # TODO
-        return point(point + self)
+vector = base
 
 class matrix:
     @staticmethod

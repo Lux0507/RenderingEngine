@@ -1,7 +1,7 @@
 from base import *
 
 class MObject:
-    def __init__(self, points: tuple[Point3D] = (), connections: list[tuple[float]] = [],
+    def __init__(self, points: list[Point3D] = (), connections: list[tuple[float]] = [],
                  color: tuple[int] = (255, 255, 255), stroke_width: int = 1):
         """Creates an highly custumizable Object in 3d Space
 
@@ -30,6 +30,46 @@ class MObject:
         MObject.__ConnsValidation(points, connections)
         obj.Conns = connections
         return obj
+    def __eq__(self, other):
+        # check points 
+        l = [x == y for x, y in zip(sorted(self.Points), sorted(other.Points))]
+        # TODO find a __lt__ that doesn't ignores elements with same magnitude (as now)
+        if not all(l):
+            return False
+        
+        #check amount of connections
+        if len(self.Conns) != len(other.Conns):
+            return False
+        
+        #check connections
+        res = True
+        for first_index in range(len(self.Points)):
+            #finding the matching elem in other
+            second_index = 0
+            while second_index < len(other.Points):
+                if self.Points[first_index] == other.Points[second_index]:
+                    break
+                else:
+                    second_index += 1
+
+            # collect all connections of both points
+            first_connected_to: list[base] = []
+            second_connected_to: list[base] = []
+            for first, second in zip(self.Conns, other.Conns):
+                if first[0] == first_index:
+                    first_connected_to.append(self.Points[first[1]])
+                if first[1] == first_index:
+                    first_connected_to.append(self.Points[first[0]])
+                if second[0] == second_index:
+                    second_connected_to.append(other.Points[second[1]])
+                if second[1] == second_index:
+                    second_connected_to.append(other.Points[second[0]])
+            # sort lists to compare
+            first_connected_to.sort()
+            second_connected_to.sort()
+            # compare
+            res &= all([x == y for x, y in zip(first_connected_to, second_connected_to)]) # turns False if only one connected point is not equal
+        return res
     @staticmethod
     def __ConnsValidation(points: list[base], conns: list[tuple[float]]):
         Am_Points = len(points)

@@ -3,12 +3,27 @@ from base import *
 class Camera:
     def __init__(self, position: point = point([0, 0, 0]), orientation: vector = vector([0, 0, 0]), target: point = None):
         # the position as pair of three cartesian coordinates
-        self.position_: point = position
+        self.position_: base = position
         # the orientation in tait-bryan angles (yaw, pitch, roll)
-        self.orientation_: vector = orientation
-        self.target_: point = target
-    '''changes the rotation of the camera to watch the given target from its current position'''
+        self.orientation_: base = orientation
+        self.target_: base = target
+    def absOrient(self, yaw: float, pitch: float, roll: float):
+        self.orientation_ = base([yaw, pitch, roll])
+    def relOrient(self, quaternion):
+        pass
+        # TODO
+    def yaw(yaw):
+        pass
+    def pitch(pitch):
+        pass
+    def roll(roll):
+        pass
     def target(self, target: point): # roll is not affected by that
+        """changes the orientation of the camera to wathc the given target from its current position
+
+        Args:
+            target (point): the target to face
+        """
         self.target_ = target
         direction = vbp(self.orientation_, target, True)
         yaw = atan(direction[0]/direction[2]) # = atan(x/z)
