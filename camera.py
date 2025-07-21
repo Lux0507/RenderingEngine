@@ -43,10 +43,12 @@ class Camera:
         for index, val in zip(range(4), -self.position_):
             translation[index, 3] = val
         # yaw pitch and roll is an extrinsic rotation around y-x'-z''
-        # converted to an intrinsic rotation we need to apply rotations around z-x-y in that order
-        # the position of translation in the multiplication doesn't matter, cause it doesn't influences the rotation.
-        result = createRotationMatrixY(-self.orientation_[0]) * \
-            (createRotationMatrixX(-self.orientation_[1]) * \
-            (createRotationMatrixZ(-self.orientation_[2]) * \
-             translation))
+        # converted to an intrinsic rotation, the camera is plaed in space by rotations around z-x-y axes in that order
+        # to convert from world space to camera space apply the positionig of the camera in the world space in reverse order, with inverted angles.
+        # So first move space, so that the camera is positioned at the origin
+        # then apply rotations around y-z-x axes in that order. (remember: matrix multiplication is read from left to right)
+        result =    createRotationMatrixZ(-self.orientation_[2]) * \
+                    (createRotationMatrixX(-self.orientation_[1]) * \
+                    (createRotationMatrixY(-self.orientation_[0]) * \
+                    translation))
         return result

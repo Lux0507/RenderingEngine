@@ -19,7 +19,7 @@ def CameraTransformTest():
     angleX = -PI/2
     angleZ = 0.0
     while angleY < 2*PI:
-        while angleX < (3*PI)/2:
+        while angleX < PI:
             while angleZ < 2*PI:
                 for z in range(8):
                     for x in range(8):
@@ -62,9 +62,9 @@ def CameraTransformTest():
                                         ]
                                     elif angleZ == PI/2:
                                         exspected_res_points = [ # valid, not tested
-                                            Point3D(y + a, -(x + b), z + c),
-                                            Point3D(y + d, -(x + e), z + f),
-                                            Point3D(y + g, -(x + h), z + i)
+                                            Point3D(-(y + a), x + b, z + c),
+                                            Point3D(-(y + d), x + e, z + f),
+                                            Point3D(-(y + g), x + h, z + i)
                                         ]
                                     elif angleZ == PI:
                                         exspected_res_points = [ # valid, not tested
@@ -74,9 +74,9 @@ def CameraTransformTest():
                                         ]
                                     elif angleZ == (3*PI)/2:
                                         exspected_res_points = [ # valid, not tested
-                                            Point3D(-(y + a), x + b, z + c),
-                                            Point3D(-(y + d), x + e, z + f),
-                                            Point3D(-(y + g), x + h, z + i)
+                                            Point3D(y + a, -(x + b), z + c),
+                                            Point3D(y + d, -(x + e), z + f),
+                                            Point3D(y + g, -(x + h), z + i)
                                         ]
                                 elif angleX == PI/2:
                                     if angleZ == 0:
