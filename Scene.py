@@ -49,27 +49,9 @@ class Scene:
             # check wether projection is inside of FOV.
             # The FOV is a rectangle at z = 1 with its center right at (0, 0, 1)
             # everything on that size-adjustable rectangle is gonna be in the field of view
-            # per default true, cause its gonna turn false, if one point is inside the FOV
-            ObjectOutside = True
-            for point in projected_obj.Points:
-                if point[0] > self.FOV[0] * 0.5:
-                    ObjectOutside &= True
-                    continue
-                elif point[0] < -self.FOV[0] * 0.5:
-                    ObjectOutside &= True
-                    continue
-                if point[1] > self.FOV[1] * 0.5:
-                    ObjectOutside &= True
-                    continue
-                elif point[1] < -self.FOV[1] * 0.5:
-                    ObjectOutside &= True
-                    continue
-                # if one point is not outside, the entire object needs to be rendered
-                ObjectOutside &= False
-            if ObjectOutside == False:
-                res.append(projected_obj)
+            res.append(self.__InFOV(projected_obj))
         # remember, that at that point, the third coordinate of each point is just a depth information!
-        # we keep it as MObjects, to keep information about the connections!
+        # we keep it as MObjects, to keep information about the connections, but the MObjects do not represent three dimensional point!
         return res
     def __scaleToScreen(self, objs: list[MObject]):
         res: list[MObject] = []
@@ -150,7 +132,48 @@ class Scene:
         # y outside?
         if point[1] >= self.ScreenSize[1] or point[1] < 0:
             result &= False
-        return result      
+        return result
+    def __InFOV(self, obj: MObject):
+        """removes the parts of an MObject, that aren't depicted on the screen, cause they are outside,
+        by cheking each (extended) connection to touch the outer edges of the FOV.
+        Each connection that touches two edges is being kept, as well as the points, that the connection consists of.
+        Each connection that touches no edge is being removed, but the points my be kept for other connections that are inside
+
+        Args:
+            obj (MObject): the MObject to work on.
+
+        Returns:
+            _type_: Another MObject, with only the points and connections that are necessary for drawing
+        """
+        # TODO: make that it returns the MObject with only the conns that need to be drawn
+        # (also remove points, that have no connection then)
+        x_zero = 0.5 * self.FOV[0]
+        y_zero = 0.5 * self.FOV[1]
+        result_points: list[base] = []
+        result_conns: list[tuple[int]] = []
+        for conn in obj.Conns:
+            results: list[bool] = []
+            func = self.__GetLineFunction(obj.Points[conn[0]], obj.Points[conn[1]], False)
+            func_inverse = self.__GetLineFunction(obj.Points[conn[0]], obj.Points[conn[1]], True)
+            vertical_edges = (func(-x_zero), func(x_zero))
+            horizontal_edges = (func_inverse(-y_zero), func_inverse(y_zero))
+            # test vertical edges
+            results.append((-y_zero <= vertical_edges[0]) & (vertical_edges[0] <= y_zero)) # left
+            results.append((-y_zero <= vertical_edges[1]) & (vertical_edges[1] <= y_zero)) # right
+            # test horizontal edges:
+            results.append((-x_zero <= horizontal_edges[0]) & (horizontal_edges[0] <= x_zero)) # bottom
+            results.append((-x_zero <= horizontal_edges[1]) & (horizontal_edges[1] <= x_zero)) # up
+            # check wether there was at least one point on edges
+            if any(results):
+                # append points to new point list, if not already in
+                if obj.Points[conn[0]] not in result_points:
+                    result_points.append(obj.Points[conn[0]])
+                if obj.Points[conn[1]] not in result_points:
+                    result_points.append(obj.Points[conn[1]])
+                # find changed conn indexes and append those to result_conns
+                new_conn = (result_points.index(obj.Points[conn[0]]), result_points.index(obj.Points[conn[1]]))
+                result_conns.append(new_conn)
+        return MObject.fromRawData(result_points, result_conns)
     def __SortConn(self, first: base, second: base):
         """sorts the two projected points of a connection, 
         so that the one being outside of the fov is placed at index 1.
@@ -179,7 +202,33 @@ class Scene:
                 return (first, second)
             else:
                 return (second, first)
+    @staticmethod
+    def __GetLineFunction(point1: base, point2: base, inverse: bool = False):
+        """computes the linear function that connects point1 to point2 in 2d space
+        Can handle 2.5 dimensional points (2d points with a depth information as third coordinate)
 
+        Args:
+            point1 (base): one point on the linear function
+            point2 (base): another point on the linear function
+            inverse (bool): wether to return the function with respect to x or to y.
+            False returns linear function with respect to x (f(x)). Defaults to False
+
+        Raises:
+            ValueError: if input points are not 2dimensional
+
+        Returns:
+            _type_: the function as lambda, that takes in one x or y value and computes its y or x value.
+        """
+        if point1.dimensions < 2 or point2.dimensions < 2:
+            raise ValueError("Method Scene.__PointOnLine() can only operate on 2d points")
+        if not inverse:
+            m_ = (point2[1] - point1[1]) / (point2[0] - point2[0])
+            c_ = point1[1] - m_ * point1[0]
+            return lambda x, m = m_, c = c_ : m * x + c
+        else:
+            m_ = (point2[0] - point1[0]) / (point2[1] - point1[1])
+            c_ = point1[0] - m_ * point1[1]
+            return lambda y, m = m_, c = c_ : m * y + c
 
     def render(self):
         py.init()

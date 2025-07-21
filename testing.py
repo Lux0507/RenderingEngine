@@ -1,5 +1,5 @@
 from Scene import *
-
+# TODO: Test for pinhole project
 
 def CameraTransformTest():
     cam = Camera(point([0, 0, 0]))
@@ -369,7 +369,6 @@ def CameraTransformTestOnMObject(obj: MObject, camera: Camera, exspected_res: MO
 def SceneTest():
     myScene = Scene(camera_position=(0, -4, 0))
     myScene.Camera.orientation_ = (PI, PI/2, 0)
-    # TODO: pitch does not work, yaw and roll work fine
     myScene.add(
         MObject(
             (Point3D(0, 2, 2),
@@ -380,7 +379,6 @@ def SceneTest():
     )
     myScene.render()
 
-
 def SortTest():
     l1 = [                      # abc, acb, bac, bca, cab, cba
         base([0, 2, 0]),    # b:  1     1    1    1    1    1
@@ -390,5 +388,6 @@ def SortTest():
     l1.sort()
     print(l1)
 
+
 # SortTest()
-CameraTransformTest()
+# CameraTransformTest()

@@ -183,11 +183,8 @@ point = base
 vector = base
 
 class matrix:
-    @staticmethod
-    def fromData(matrix_: np.ndarray):
-        m = matrix(matrix_.shape)
-        m.__data = matrix_
-        return m
+    """gives a huge UI for creating, storing and computing with 2x2 matrices
+    """
     def __init__(self, shape: tuple):
         self.shape: tuple = shape
         self.__data: np.ndarray = np.zeros(shape)
@@ -196,6 +193,27 @@ class matrix:
         m = matrix(shape)
         for num in range(min(shape[0], shape[1])): # for non-square matrices
             m[num, num] = 1
+        return m
+    @staticmethod
+    def fromList(matrix: list):
+        amRows = len(matrix)
+        if type(matrix[0]) == type(list):
+            amColums = len(matrix[0])
+        for rowVector in matrix:
+            if not (type(rowVector) == type(list)):
+                raise ValueError("Can't build matrix from one-dimensional list")
+            if not (len(rowVector) == amColums):
+                raise ValueError("Can't build matrix from list containing lists of different lengths")
+            # TODO iterate throug rowvector and check content
+        m = matrix((amRows, amColums))
+        for row in amRows:
+            for column in amColums:
+                m[row, column] = matrix[row][column]
+        return m
+    @staticmethod
+    def fromData(matrix_: np.ndarray):
+        m = matrix(matrix_.shape)
+        m.__data = matrix_
         return m
     def __getitem__(self, index):
         if type(index) != tuple: # No tuple as argument
@@ -254,6 +272,20 @@ class matrix:
                         res += "|"
             res += "\n"
         return res
+    def __repr__(self):
+        erg = "matrix.fromList(["
+        for row in range(self.shape[0]):
+            erg += "["
+            for column in range(self.shape[1]):
+                erg += str(self.__data[row][column])
+                # if not last elem
+                if not (column == (self.shape[1] - 1)):
+                    erg += ", "
+            erg += "]"
+            if not (row == (self.shape[0] - 1)):
+                erg += ", "
+        erg += "])"
+        return erg
     def __mul__(self, other):
         if type(other) != matrix:
             raise TypeError(
@@ -291,7 +323,6 @@ class matrix:
     def getr(self):
         return self.__data
 
-
 def vbp(start: point, tip: point, normalize: bool = False):
     """creates a vector between points
 
@@ -308,11 +339,6 @@ def vbp(start: point, tip: point, normalize: bool = False):
         return erg.normalize()
     else:
         return erg
-
-def create(vector: base):
-    if len(vector) != 3:
-        raise ValueError("'Unable to create Vector3D. input vector has wrong amount of dimensions")
-    return Vector3D(*vector)
 
 def createRotationMatrixX(angle):
     """generates a 4x4 matrix, that rotates each point in a left-handed coordinate system
@@ -463,7 +489,16 @@ class Point3D:
         self.X = x
         self.Y = y
         self.Z = z
-    '''returns the coordinates of the point as a tuple of (x, y, z)'''
+    def __str__(self):
+        return f"({self.X}, {self.Y}, {self.Z})"
+    def __repr__(self):
+        return "Point3D.Point3D" + str(self)
     def get(self) -> tuple[float]:
+        """returns the coordinates of the Point3D as a tuple of (x, y, z)
+
+        Returns:
+            tuple[float]: the tuple (x, y, z)
+        """
+        # used in constructor of MObject
         return (self.X, self.Y, self.Z)
 
