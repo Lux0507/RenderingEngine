@@ -9,11 +9,11 @@ import pygame as py
 
 class Scene:
     # left handed coordinate system!
-    def __init__(self, fov = 1.0, camera_position = (0, 0, 0), screen_width = 1600, screen_ratio = (16, 9)):
+    def __init__(self, fov = 1.0, camera_position = (0, 0, 0), camera_orientation = (0, 0, 0), screen_width = 1600, screen_ratio = (16, 9)):
         self.ScreenSize: tuple[int] = (screen_width, screen_width * (screen_ratio[1] / screen_ratio[0]))
         self.ScreenRatio = screen_ratio
         self.Screen = py.PixelArray(py.Surface(self.ScreenSize))
-        self.Camera = Camera(position=point(camera_position))
+        self.Camera = Camera(position=point.create(camera_position), orientation=point.create(camera_orientation))
         # width of plane to project onto
         self.FOV = (fov, fov * (screen_ratio[1] / screen_ratio[0]))
         self.Objects: list[MObject] = []
@@ -31,7 +31,7 @@ class Scene:
                 obj.applyCameraTransform(cameraTransform)
             )
         return transformed
-    def __pinholeProject(self, objs: list[MObject]):
+    def pinholeProject(self, objs: list[MObject]):
         res: list[MObject] = []
         # finding deepest point in image (biggest z value)
         deepest_point = 0
@@ -55,7 +55,7 @@ class Scene:
         return res
     def __scaleToScreen(self, objs: list[MObject]):
         res: list[MObject] = []
-        outer_corner = base([self.FOV[0] * 0.5, self.FOV[1] * -0.5, 0])
+        outer_corner = base.create([self.FOV[0] * 0.5, self.FOV[1] * -0.5, 0])
         # the outer corner (positive x and positive y) of the plane where everything got projected onto
         # by adding this to each point, we move the origin to the top left and everything else to the first quadrant
         # the minus for the y-coordinate is on purpose: its for flipping the screen.
@@ -106,7 +106,7 @@ class Scene:
                         num = -num
                     x = round(points[0][0] + num)
                     y = round(points[0][1] + num * m)
-                    if not self.__isInside(base([x, y])):
+                    if not self.__isInside(base.create([x, y])):
                         # no further check are needed, cause if one point is outside its the one at index 1
                         # no chance, that x and y are gonna be inside again, so jump to next conn
                         break
@@ -155,14 +155,46 @@ class Scene:
             results: list[bool] = []
             func = self.__GetLineFunction(obj.Points[conn[0]], obj.Points[conn[1]], False)
             func_inverse = self.__GetLineFunction(obj.Points[conn[0]], obj.Points[conn[1]], True)
+            # compute points of lines lying on the edges, can return True and False, if func has an equation like x == something.
             vertical_edges = (func(-x_zero), func(x_zero))
             horizontal_edges = (func_inverse(-y_zero), func_inverse(y_zero))
+            
+            # all of those testing for lines with equation x == something is not necessary, cause if they appear, the cheking for y (or in inversed for x) catches them even if they appear to be right on the edge
+
             # test vertical edges
-            results.append((-y_zero <= vertical_edges[0]) & (vertical_edges[0] <= y_zero)) # left
-            results.append((-y_zero <= vertical_edges[1]) & (vertical_edges[1] <= y_zero)) # right
+            if isinstance(vertical_edges[0], bool): # func is a line with equation x = something
+                # (if one elem in tuple is instance of bool, the other one always is)
+                # also func only returns true for one input, do elif is allowed!
+                if vertical_edges[0] == True:
+                    results.append(True)  # cuts the left edge
+                    results.append(False) # doesn't cuts the right edge
+                elif vertical_edges[1] == True:
+                    results.append(False) # doesn't cuts the left edge
+                    results.append(True)  # cuts the right edge
+                else:
+                    results.append(False) # doesn't cuts the left edge
+                    results.append(False) # doesn't cuts the right edge
+            else:
+                results.append((-y_zero <= vertical_edges[0]) & (vertical_edges[0] <= y_zero)) # left
+                results.append((-y_zero <= vertical_edges[1]) & (vertical_edges[1] <= y_zero)) # right
+            
             # test horizontal edges:
-            results.append((-x_zero <= horizontal_edges[0]) & (horizontal_edges[0] <= x_zero)) # bottom
-            results.append((-x_zero <= horizontal_edges[1]) & (horizontal_edges[1] <= x_zero)) # up
+            if isinstance(horizontal_edges[0], bool): # func_inverse is a line with equation x = something (already reversed, not reversed it would be something like y == ...)
+                # (if one elem in tuple is instance of bool, the other one always is)
+                # also func_inverse only returns true for one input, do elif is allowed!
+                if horizontal_edges[0] == True:
+                    results.append(True)  # cuts the bottom edge
+                    results.append(False) # doesn't cuts the upper edge
+                elif horizontal_edges[1] == True:
+                    results.append(False) # doesn't cuts the bottom edge
+                    results.append(True)  # cuts the upper edge
+                else:
+                    results.append(False) # doesn't cuts the bottom edge
+                    results.append(False) # doesn't cuts the upper edge
+            else:
+                results.append((-x_zero <= horizontal_edges[0]) & (horizontal_edges[0] <= x_zero)) # bottom
+                results.append((-x_zero <= horizontal_edges[1]) & (horizontal_edges[1] <= x_zero)) # up
+            
             # check wether there was at least one point on edges
             if any(results):
                 # append points to new point list, if not already in
@@ -222,10 +254,21 @@ class Scene:
         if point1.dimensions < 2 or point2.dimensions < 2:
             raise ValueError("Method Scene.__PointOnLine() can only operate on 2d points")
         if not inverse:
-            m_ = (point2[1] - point1[1]) / (point2[0] - point2[0])
+            # check wether line has equation: x = something (m is undefinded cause del_x = 0)
+            if point2[0] == point1[0]:
+                x_val = point1[0]
+                # create function that only returns True if x == x_val and False otherwise (for non-defined)
+                return lambda x, m = 0, c = x_val : True if x == c else False
+            m_ = (point2[1] - point1[1]) / (point2[0] - point1[0])
             c_ = point1[1] - m_ * point1[0]
             return lambda x, m = m_, c = c_ : m * x + c
         else:
+            # check wether line has equation y = something (not reversed)
+            # reversed that would be x = something and m would be undefinded cause del_x (reversed) = 0 and del_y (not reversed) = 0
+            if point2[1] == point1[1]:
+                y_val = point1[1]
+                # create function that only returns True, when y_val == y and False otherwise (for non-defined)
+                return lambda y, m = 0, c = y_val : True if y == c else False
             m_ = (point2[0] - point1[0]) / (point2[1] - point1[1])
             c_ = point1[0] - m_ * point1[1]
             return lambda y, m = m_, c = c_ : m * y + c
@@ -237,7 +280,7 @@ class Scene:
         # camera transformation
         cameraTransformed = self.__cameraTransform(self.Objects)
         # camera projection
-        pinhole_projected = self.__pinholeProject(cameraTransformed)
+        pinhole_projected = self.pinholeProject(cameraTransformed)
         # scaling
         scaledOnScreen = self.__scaleToScreen(pinhole_projected)
         # draw and rasterize

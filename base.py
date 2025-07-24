@@ -4,20 +4,37 @@ from math import *
 PI = radians(180)
 
 class base:
-    def __init__(self, data: list):
-        self.dimensions = len(data)
-        self.__data = np.array(data)
-        self.__curr = 0
-        self.__end = self.dimensions
-    @staticmethod
-    def fromNumpy(data: np.ndarray):
+    def __init__(self, data: np.ndarray):
         if len(data.shape) != 1:
             raise ValueError(
                 'Unable to create a vector out of an array of shape ' +
                 data.shape +
                 ', too much dimensions.'
                 )
-        return base(data.tolist())
+        # TODO: check data.dtype
+        self.dimensions = len(data)
+        self.__data = np.array(data)
+        self.__curr = 0
+        self.__end = self.dimensions
+    @staticmethod
+    def create(data: np.ndarray):
+        if len(data.shape) != 1:
+            raise ValueError(
+                'Unable to create a vector out of an array of shape ' +
+                data.shape +
+                ', too much dimensions.'
+                )
+        return base(data)
+    @staticmethod
+    def create(data: tuple):
+        if not all([isinstance(x, int) or isinstance(x, float) for x in data]):
+            raise ValueError("tuple for creating 'base' type needs to hold only numbers of type int or float")
+        return base(np.array(data))
+    @staticmethod
+    def create(data: list):
+        if not all([isinstance(x, int) or isinstance(x, float) for x in data]):
+            raise ValueError("list for creating 'base' type needs to hold only numbers of type int or float")
+        return base(np.array(data))
     def __len__(self):
         return len(self.__data)
     def __getitem__(self, key: int):
@@ -50,7 +67,7 @@ class base:
         return False
     def __neg__(self):
         res = [-elem for elem in self.__data]
-        return base(res)
+        return base(np.array(res))
     def __add__(self, other):
         if self.dimensions != other.dimensions:
             raise ValueError(
@@ -73,7 +90,7 @@ class base:
                 res +="]"
         return res
     def __repr__(self):
-        res = "base.base("
+        res = "base.create("
         res += str(self)
         res += ")"
         return res
@@ -156,7 +173,7 @@ class base:
             res.append(
                 self.__data[num]/self.__data[-1]
             )
-        return base(res)
+        return base(np.array(res))
     def homogenous(self, plane = 1):
         """Add one dimension to this point/vector to be able to perform translations by matrix multiplication.
 
@@ -167,7 +184,7 @@ class base:
             _type_: The homogenous representation for the point/vector
         """
         new_data = np.append(self.__data, plane)
-        return self.fromNumpy(new_data)
+        return self.create(new_data)
     def pinholeProject(self, deepest_z):
         res = []
         for index in range(self.dimensions):
@@ -177,7 +194,7 @@ class base:
             # for the last element: divide by deepest_z and keep depth information
             else:
                 res.append(self.__data[index]/deepest_z)
-        return base(res)
+        return base(np.array(res))
 
 point = base
 vector = base
@@ -319,7 +336,7 @@ class matrix:
         for result_index in range(output_dim):
             for index in range(input_dim):
                 erg[result_index] += other[index] * self.__data[result_index][index]
-        return base(erg)
+        return base.create(erg)
     def getr(self):
         return self.__data
 
@@ -334,7 +351,7 @@ def vbp(start: point, tip: point, normalize: bool = False):
     Returns:
         _type_: a vector pointing from start into the direction of end, either normalized or not
     """
-    erg = vector(tip - start)
+    erg = tip - start
     if normalize:
         return erg.normalize()
     else:
@@ -469,7 +486,7 @@ class Vector3D:
         return Vector3D(x, y, z)
     '''Morphes the Vector3D into a base element'''
     def morph(self):
-        return base([self.X, self.Y, self.Z])
+        return base.create([self.X, self.Y, self.Z])
     def scale(self, scalar: float):
         x = self.X * scalar
         y = self.Y * scalar

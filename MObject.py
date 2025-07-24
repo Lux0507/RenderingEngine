@@ -16,7 +16,7 @@ class MObject:
         """
         self.Points: list[base] = []
         for point in points:
-            self.Points.append( base(point.get()) )
+            self.Points.append( base.create(point.get()) )
         MObject.__ConnsValidation(self.Points, connections)
         self.Conns = connections
         # style
@@ -30,6 +30,36 @@ class MObject:
         MObject.__ConnsValidation(points, connections)
         obj.Conns = connections
         return obj
+    def __str__(self):
+        res = "points: ["
+        for index in range(len(self.Points)):
+            res += str(index + 1) + ": "
+            res += str(self.Points[index])
+            if index != len(self.Points) - 1:
+                res += ",  "
+            else:
+                res += "]"
+        res += "; conns: ["
+        for index in range(len(self.Conns)):
+            tp = (self.Conns[index][0] + 1, self.Conns[index][1] + 1)
+            res += str(tp)
+            if index != len(self.Conns) - 1:
+                res += ", "
+            else:
+                res += "]"
+        res += "; color: " + str(self.Color)
+        return res
+        # TODO: add other elements
+    def __repr__(self):
+        res = "MObject.MObject(["
+        for index in range(len(self.Points)):
+            res += f"Point3D({self.Points[index][0]}, {self.Points[index][1]}, {self.Points[index][2]})"
+            if index != len(self.Points) - 1:
+                res += ", "
+            else:
+                res += "]"
+        res += f", connections={self.Conns}, color={self.Color}, stroke_width={self.StrokeWidth}"
+        return res
     def __eq__(self, other):
         # check points 
         l = [x == y for x, y in zip(sorted(self.Points), sorted(other.Points))]

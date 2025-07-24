@@ -1,7 +1,7 @@
 from base import *
 
 class Camera:
-    def __init__(self, position: point = point([0, 0, 0]), orientation: vector = vector([0, 0, 0]), target: point = None):
+    def __init__(self, position: point = point.create([0, 0, 0]), orientation: vector = vector.create([0, 0, 0]), target: point = None):
         # the position as pair of three cartesian coordinates
         self.position_: base = position
         # the orientation in tait-bryan angles (yaw, pitch, roll)

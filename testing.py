@@ -1,8 +1,10 @@
 from Scene import *
 # TODO: Test for pinhole project
 
+# region Camera transform Test
+
 def CameraTransformTest():
-    cam = Camera(point([0, 0, 0]))
+    cam = Camera(point.create([0, 0, 0]))
     cam.orientation_ = (0, 0, 0)
     a, b, c = 2, 0, 0
     d, e, f = 0, 2, 0
@@ -24,8 +26,8 @@ def CameraTransformTest():
                 for z in range(8):
                     for x in range(8):
                         for y in range(8):
-                            cam.position_ = base([-x, -y, -z])
-                            cam.orientation_ = base([angleY, angleX, angleZ])
+                            cam.position_ = base.create([-x, -y, -z])
+                            cam.orientation_ = base.create([angleY, angleX, angleZ])
                             exspected_res_points: list[Point3D] = []
                             if angleY == 0:
                                 if angleX == -PI/2:
@@ -335,8 +337,8 @@ def CameraTransformTest():
                             # store each camposition that didn't work
                             if CameraTransformTestOnMObject(obj, cam, exspectedRes):
                                 error.append((
-                                    base([-x, -y, -z]),
-                                    base([angleY, angleX, angleZ])
+                                    base.create([-x, -y, -z]),
+                                    base.create([angleY, angleX, angleZ])
                                 ))
                 angleZ += PI/2
             angleX += PI/2
@@ -366,6 +368,67 @@ def CameraTransformTestOnMObject(obj: MObject, camera: Camera, exspected_res: MO
     transformed = obj.applyCameraTransform(camera.getCameraTransformMatrix())
     return not (transformed == exspected_res)
 
+# endregion
+
+#region pinhole project test
+
+def pinholeProjectTest():
+    error: list[tuple] = []
+    for z in range(1, 8):
+        fov = 1.0
+        while fov < 4.5:
+            # for fov = 2.0 the connection is right on the edge of the screen. What ist GetLine going to compute then
+            scene = Scene(fov=fov)
+            objs = [
+                MObject([
+                    Point3D(1 ,  1, z),
+                    Point3D(-1,  1, z),
+                    Point3D(1 , -1, z),
+                    Point3D(-1, -1, z)
+                ], [(0, 1), (0, 2), (1, 3), (2, 3)])
+            ]
+            result = Scene.pinholeProject(scene, objs)[0]
+            comparison: bool = False
+            if fov < 2.0:
+                exspected_result = MObject([
+                        Point3D(1/z ,  1/z, 1.0),
+                        Point3D(-1/z, 1/z, 1.0),
+                        Point3D(1/z , -1/z, 1.0),
+                        Point3D(-1/z, -1/z, 1.0)
+                    ], [])
+                comparison = result == exspected_result
+                if not comparison:
+                    error.append((result, exspected_result, fov, z))
+            elif fov < 4.0:
+                # horizontal conns are outside
+                exspected_result = MObject([
+                        Point3D(1/z ,  1/z, 1.0),
+                        Point3D(-1/z,  1/z, 1.0),
+                        Point3D(1/z , -1/z, 1.0),
+                        Point3D(-1/z, -1/z, 1.0)
+                    ], [(0, 2), (1, 3)])
+                comparison = result == exspected_result
+                if not comparison:
+                    error.append((result, exspected_result, fov, z))
+            else:
+                exspected_result = MObject([
+                        Point3D(1/z ,  1/z, 1.0),
+                        Point3D(-1/z,  1/z, 1.0),
+                        Point3D(1/z , -1/z, 1.0),
+                        Point3D(-1/z, -1/z, 1.0)
+                    ], [(0, 1), (0, 2), (1, 3), (2, 3)])
+                comparison = result == exspected_result
+                if not comparison:
+                    error.append((result, exspected_result, fov, z))
+            fov += 0.5
+    if len(error) > 0:
+        # print out mistakes
+        print(f"Es sind {len(error)} Fehler aufgetreten:")
+        for elem in error:
+            print(f"Fehler bei z={error[3]} und fov={error[2]}: erwartetes Ergebnis: {elem[1]}; erhaltenes Ergebnis: {elem[0]}")
+
+# endregion
+
 def SceneTest():
     myScene = Scene(camera_position=(0, -4, 0))
     myScene.Camera.orientation_ = (PI, PI/2, 0)
@@ -381,13 +444,13 @@ def SceneTest():
 
 def SortTest():
     l1 = [                      # abc, acb, bac, bca, cab, cba
-        base([0, 2, 0]),    # b:  1     1    1    1    1    1
-        base([0, 0, 2]),    # c:  0     0    0    0    0    0
-        base([2, 0, 0])     # a:  2     2    2    2    2    2
+        base.create([0, 2, 0]),    # b:  1     1    1    1    1    1
+        base.create([0, 0, 2]),    # c:  0     0    0    0    0    0
+        base.create([2, 0, 0])     # a:  2     2    2    2    2    2
     ]
     l1.sort()
     print(l1)
 
-
+pinholeProjectTest()
 # SortTest()
 # CameraTransformTest()
