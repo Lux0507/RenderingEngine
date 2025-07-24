@@ -165,15 +165,8 @@ class Scene:
             if isinstance(vertical_edges[0], bool): # func is a line with equation x = something
                 # (if one elem in tuple is instance of bool, the other one always is)
                 # also func only returns true for one input, do elif is allowed!
-                if vertical_edges[0] == True:
-                    results.append(True)  # cuts the left edge
-                    results.append(False) # doesn't cuts the right edge
-                elif vertical_edges[1] == True:
-                    results.append(False) # doesn't cuts the left edge
-                    results.append(True)  # cuts the right edge
-                else:
-                    results.append(False) # doesn't cuts the left edge
-                    results.append(False) # doesn't cuts the right edge
+                results.append(vertical_edges[0]) # wether it cuts the left edge
+                results.append(vertical_edges[1]) # wether it cuts the right edge
             else:
                 results.append((-y_zero <= vertical_edges[0]) & (vertical_edges[0] <= y_zero)) # left
                 results.append((-y_zero <= vertical_edges[1]) & (vertical_edges[1] <= y_zero)) # right
@@ -182,15 +175,8 @@ class Scene:
             if isinstance(horizontal_edges[0], bool): # func_inverse is a line with equation x = something (already reversed, not reversed it would be something like y == ...)
                 # (if one elem in tuple is instance of bool, the other one always is)
                 # also func_inverse only returns true for one input, do elif is allowed!
-                if horizontal_edges[0] == True:
-                    results.append(True)  # cuts the bottom edge
-                    results.append(False) # doesn't cuts the upper edge
-                elif horizontal_edges[1] == True:
-                    results.append(False) # doesn't cuts the bottom edge
-                    results.append(True)  # cuts the upper edge
-                else:
-                    results.append(False) # doesn't cuts the bottom edge
-                    results.append(False) # doesn't cuts the upper edge
+                results.append(horizontal_edges[0]) # wether it cuts the bottom edge
+                results.append(horizontal_edges[1]) # wether it cuts the upper edge
             else:
                 results.append((-x_zero <= horizontal_edges[0]) & (horizontal_edges[0] <= x_zero)) # bottom
                 results.append((-x_zero <= horizontal_edges[1]) & (horizontal_edges[1] <= x_zero)) # up
