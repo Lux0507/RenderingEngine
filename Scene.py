@@ -31,7 +31,7 @@ class Scene:
                 obj.applyCameraTransform(cameraTransform)
             )
         return transformed
-    def pinholeProject(self, objs: list[MObject]):
+    def __pinholeProject(self, objs: list[MObject]):
         res: list[MObject] = []
         # finding deepest point in image (biggest z value)
         deepest_point = 0
@@ -53,7 +53,7 @@ class Scene:
         # remember, that at that point, the third coordinate of each point is just a depth information!
         # we keep it as MObjects, to keep information about the connections, but the MObjects do not represent three dimensional point!
         return res
-    def __scaleToScreen(self, objs: list[MObject]):
+    def scaleToScreen(self, objs: list[MObject]):
         res: list[MObject] = []
         outer_corner = base.create([self.FOV[0] * 0.5, self.FOV[1] * -0.5, 0])
         # the outer corner (positive x and positive y) of the plane where everything got projected onto
@@ -115,6 +115,34 @@ class Scene:
                     
                     #TODO apply stoke_Width
                     # TODO very steep lines (diff_x = 0 or 1, but diff_y = 800)
+    def __SortConn(self, first: base, second: base):
+        """sorts the two projected points of a connection, 
+        so that the one being outside of the fov is placed at index 1.
+        That helps with the cutt offs during rasterization.
+        if both points are inside, the point with smaller x-value is placed at index 0
+        if both points are outside it returns an empty tuple
+
+        Args:
+            first (base): the first point of the connection
+            second (base): the second point of the connection
+
+        Returns:
+            _type_: a tuple of two point with the one being outside at index 1. empty, when both points are outside
+        """
+        firstInside = self.__isInside(first)
+        secondInside = self.__isInside(second)
+        if (not firstInside) and (not secondInside):
+            return ()
+        elif firstInside and (not secondInside):
+            return (first, second)
+        elif (not firstInside) and secondInside:
+            return (second, first)
+        else:
+            # if both inside place point with smaller x at index 0
+            if first[0] <= second[0]:
+                return (first, second)
+            else:
+                return (second, first)
     def __isInside(self, point: base):
         """Check wether a projected and scaled point is inside of the screen.
         Needed to check for cutt offs
@@ -145,8 +173,6 @@ class Scene:
         Returns:
             _type_: Another MObject, with only the points and connections that are necessary for drawing
         """
-        # TODO: make that it returns the MObject with only the conns that need to be drawn
-        # (also remove points, that have no connection then)
         x_zero = 0.5 * self.FOV[0]
         y_zero = 0.5 * self.FOV[1]
         result_points: list[base] = []
@@ -159,7 +185,8 @@ class Scene:
             vertical_edges = (func(-x_zero), func(x_zero))
             horizontal_edges = (func_inverse(-y_zero), func_inverse(y_zero))
             
-            # all of those testing for lines with equation x == something is not necessary, cause if they appear, the cheking for y (or in inversed for x) catches them even if they appear to be right on the edge
+            # all of those testing for lines with equation x == something is not necessary,
+            # cause if they appear, the cheking for y (or in inversed for x) catches them even if they appear to be right on the edge
 
             # test vertical edges
             if isinstance(vertical_edges[0], bool): # func is a line with equation x = something
@@ -192,34 +219,6 @@ class Scene:
                 new_conn = (result_points.index(obj.Points[conn[0]]), result_points.index(obj.Points[conn[1]]))
                 result_conns.append(new_conn)
         return MObject.fromRawData(result_points, result_conns)
-    def __SortConn(self, first: base, second: base):
-        """sorts the two projected points of a connection, 
-        so that the one being outside of the fov is placed at index 1.
-        That helps with the cutt offs during rasterization.
-        if both points are inside, the point with smaller x-value is placed at index 0
-        if both points are outside it returns an empty tuple
-
-        Args:
-            first (base): the first point of the connection
-            second (base): the second point of the connection
-
-        Returns:
-            _type_: a tuple of two point with the one being outside at index 1. empty, when both points are outside
-        """
-        firstInside = self.__isInside(first)
-        secondInside = self.__isInside(second)
-        if (not firstInside) and (not secondInside):
-            return ()
-        elif firstInside and (not secondInside):
-            return (first, second)
-        elif (not firstInside) and secondInside:
-            return (second, first)
-        else:
-            # if both inside place point with smaller x at index 0
-            if first[0] <= second[0]:
-                return (first, second)
-            else:
-                return (second, first)
     @staticmethod
     def __GetLineFunction(point1: base, point2: base, inverse: bool = False):
         """computes the linear function that connects point1 to point2 in 2d space
@@ -266,9 +265,9 @@ class Scene:
         # camera transformation
         cameraTransformed = self.__cameraTransform(self.Objects)
         # camera projection
-        pinhole_projected = self.pinholeProject(cameraTransformed)
+        pinhole_projected = self.__pinholeProject(cameraTransformed)
         # scaling
-        scaledOnScreen = self.__scaleToScreen(pinhole_projected)
+        scaledOnScreen = self.scaleToScreen(pinhole_projected)
         # draw and rasterize
         self.__drawAndRasterize(scaledOnScreen)
         # display changes

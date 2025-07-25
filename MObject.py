@@ -1,7 +1,7 @@
 from base import *
 
 class MObject:
-    def __init__(self, points: list[Point3D] = (), connections: list[tuple[float]] = [],
+    def __init__(self, points: list[Point3D] = [], connections: list[tuple[float]] = [],
                  color: tuple[int] = (255, 255, 255), stroke_width: int = 1):
         """Creates an highly custumizable Object in 3d Space
 
@@ -37,9 +37,7 @@ class MObject:
             res += str(self.Points[index])
             if index != len(self.Points) - 1:
                 res += ",  "
-            else:
-                res += "]"
-        res += "; conns: ["
+        res += "]; conns: ["
         for index in range(len(self.Conns)):
             tp = (self.Conns[index][0] + 1, self.Conns[index][1] + 1)
             res += str(tp)
@@ -56,14 +54,11 @@ class MObject:
             res += f"Point3D({self.Points[index][0]}, {self.Points[index][1]}, {self.Points[index][2]})"
             if index != len(self.Points) - 1:
                 res += ", "
-            else:
-                res += "]"
-        res += f", connections={self.Conns}, color={self.Color}, stroke_width={self.StrokeWidth}"
+        res += f"], connections={self.Conns}, color={self.Color}, stroke_width={self.StrokeWidth}"
         return res
     def __eq__(self, other):
         # check points 
         l = [x == y for x, y in zip(sorted(self.Points), sorted(other.Points))]
-        # TODO find a __lt__ that doesn't ignores elements with same magnitude (as now)
         if not all(l):
             return False
         
@@ -108,7 +103,7 @@ class MObject:
             if len(conn) != 2:
                 result = True
                 raise ValueError("Connections in MObjects can only be made between exactly two points")
-            if conn[0] > Am_Points or conn[1] > Am_Points or conn[0] < 0 or conn[1] < 0:
+            if conn[0] > (Am_Points - 1) or conn[1] > (Am_Points - 1) or conn[0] < 0 or conn[1] < 0:
                 result = True
                 raise ValueError("Connection Index out of range. Can't create connection to point out of range")
         return result

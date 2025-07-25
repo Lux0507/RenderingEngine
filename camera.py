@@ -11,7 +11,6 @@ class Camera:
         self.orientation_ = base([yaw, pitch, roll])
     def relOrient(self, quaternion):
         pass
-        # TODO
     def yaw(yaw):
         pass
     def pitch(pitch):

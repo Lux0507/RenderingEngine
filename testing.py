@@ -1,5 +1,20 @@
 from Scene import *
-# TODO: Test for pinhole project
+
+# TODO list:
+# - implement and test drawing
+# - make sure, that Scene.__InFOV doesn't append empty MObjects to result
+# - revise Scene.__InFOV and __GetLineFunc: remove that specialized stuff for diff_x = 0. just return None then
+# - initializer fro MObject for Triangles paralelograms...
+# - methods add point and add connection for MObject
+# - add styling field members to MObject
+# - matrix.fromList ensure that no list of lists of non-numerical types are given
+# - implement camera reorient methods and test camera.target
+# - implement crossproduct
+# - implement __rmul__ for matrix
+# - implement matrix multiplication for non-square matrices
+# - 
+# - 
+# - 
 
 # region Camera transform Test
 
@@ -370,64 +385,119 @@ def CameraTransformTestOnMObject(obj: MObject, camera: Camera, exspected_res: MO
 
 # endregion
 
-#region pinhole project test
+# region pinhole project test
 
 def pinholeProjectTest():
+    counter = 0
     error: list[tuple] = []
     for z in range(1, 8):
         fov = 1.0
         while fov < 4.5:
-            # for fov = 2.0 the connection is right on the edge of the screen. What ist GetLine going to compute then
-            scene = Scene(fov=fov)
-            objs = [
-                MObject([
-                    Point3D(1 ,  1, z),
-                    Point3D(-1,  1, z),
-                    Point3D(1 , -1, z),
-                    Point3D(-1, -1, z)
-                ], [(0, 1), (0, 2), (1, 3), (2, 3)])
-            ]
-            result = Scene.pinholeProject(scene, objs)[0]
-            comparison: bool = False
-            if fov < 2.0:
-                exspected_result = MObject([
-                        Point3D(1/z ,  1/z, 1.0),
-                        Point3D(-1/z, 1/z, 1.0),
-                        Point3D(1/z , -1/z, 1.0),
-                        Point3D(-1/z, -1/z, 1.0)
-                    ], [])
-                comparison = result == exspected_result
-                if not comparison:
-                    error.append((result, exspected_result, fov, z))
-            elif fov < 4.0:
-                # horizontal conns are outside
-                exspected_result = MObject([
-                        Point3D(1/z ,  1/z, 1.0),
-                        Point3D(-1/z,  1/z, 1.0),
-                        Point3D(1/z , -1/z, 1.0),
-                        Point3D(-1/z, -1/z, 1.0)
-                    ], [(0, 2), (1, 3)])
-                comparison = result == exspected_result
-                if not comparison:
-                    error.append((result, exspected_result, fov, z))
-            else:
-                exspected_result = MObject([
-                        Point3D(1/z ,  1/z, 1.0),
-                        Point3D(-1/z,  1/z, 1.0),
-                        Point3D(1/z , -1/z, 1.0),
-                        Point3D(-1/z, -1/z, 1.0)
+            for height in range(9, 17):
+                counter += 1
+                screen_ratio = (16, height)
+                fov_heigth = fov * (height/16)
+                scene = Scene(fov=fov, screen_ratio=screen_ratio)
+                objs = [
+                    MObject([
+                        Point3D(1 ,  1, z),
+                        Point3D(-1,  1, z),
+                        Point3D(1 , -1, z),
+                        Point3D(-1, -1, z)
                     ], [(0, 1), (0, 2), (1, 3), (2, 3)])
-                comparison = result == exspected_result
-                if not comparison:
+                ]
+                result = Scene.__pinholeProject(scene, objs)
+                comparison: bool = False
+                if (1/z) > (fov * 0.5) and (1/z) > (fov_heigth * 0.5):
+                    exspected_result = [
+                        MObject([], [])
+                    ]
+                    comparison = result == exspected_result
+                    if not comparison:
+                        error.append((result, exspected_result, fov, z, height))
+                elif (1/z) <= (fov * 0.5) and (1/z) > (fov_heigth * 0.5):
+                    exspected_result = [
+                        MObject([
+                            Point3D(1/z ,  1/z, 1.0),
+                            Point3D(-1/z, 1/z, 1.0),
+                            Point3D(1/z , -1/z, 1.0),
+                            Point3D(-1/z, -1/z, 1.0)
+                        ], [(0, 2), (1, 3)])
+                    ]
+                    comparison = result == exspected_result
+                    if not comparison:
+                        error.append((result, exspected_result, fov, z, height))
+                elif 1/z <= (fov * 0.5) and (1/z) <= (fov_heigth * 0.5):
+                    exspected_result = [
+                        MObject([
+                            Point3D(1/z ,  1/z, 1.0),
+                            Point3D(-1/z, 1/z, 1.0),
+                            Point3D(1/z , -1/z, 1.0),
+                            Point3D(-1/z, -1/z, 1.0)
+                        ], [(0, 1), (0, 2), (1, 3), (2, 3)])
+                    ]
+                    comparison = result == exspected_result
+                    if not comparison:
+                        error.append((result, exspected_result, fov, z, height))
+                else:
+                    # something went totally wrong
                     error.append((result, exspected_result, fov, z))
+                    raise RuntimeError("vertical FOV in butr horizontal not. Hows that possible with an aspect ratio of 16:9")
             fov += 0.5
+    print(f"Es wurden Test unter {counter} verschiedenen Inputs durchgeführt.")
     if len(error) > 0:
         # print out mistakes
-        print(f"Es sind {len(error)} Fehler aufgetreten:")
+        print(f"Dabei sind {len(error)} Fehler aufgetreten:")
         for elem in error:
-            print(f"Fehler bei z={error[3]} und fov={error[2]}: erwartetes Ergebnis: {elem[1]}; erhaltenes Ergebnis: {elem[0]}")
+            print(f"Fehler bei z={elem[3]}, fov={elem[2]} und aspect_ratio={(16, elem[4])}: erwartetes Ergebnis: {elem[1]}; erhaltenes Ergebnis: {elem[0]}")
+    else:
+        print("Dabei sind keine Fehler aufgetreten")
 
 # endregion
+
+# region Scale To Screen Test
+
+def ScaleTest():
+    counter = 0
+    error = []
+    for screen_width in range(600, 1900, 200):
+        for height in range(9, 17):
+            aspectRatio = (16, height)
+            fov = 1.0
+            while fov < 4.5:
+                counter += 1
+                scene = Scene(fov, screen_width=screen_width, screen_ratio=aspectRatio)
+                objs = [MObject([
+                    Point3D(0.0,   0.0,   0.0),
+                    Point3D(fov/4, 0.0,   0.0),
+                    Point3D(0.0,   fov/8, 0.0)],
+                    [(0, 1), (0, 2), (1, 2)]
+                )]
+                result = Scene.scaleToScreen(scene, objs)
+                fov_v = fov * (height/16)
+                exspected_res = [MObject([
+                    Point3D(round((fov/2) * (screen_width/fov)),          round((-1 * (fov_v * -0.5)) * (screen_width/fov)),           0.0),
+                    Point3D(round((fov/4 + fov/2) * (screen_width/fov)),  round((-1 * (fov_v * -0.5)) * (screen_width/fov)),           0.0),
+                    Point3D(round((fov/2) * (screen_width/fov)),          round((-1 * (fov/8 + (fov_v * -0.5))) * (screen_width/fov)), 0.0)],
+                    [(0, 1), (0, 2), (1, 2)]
+                )]
+                comparison = result == exspected_res
+                if not comparison:
+                    error.append((screen_width, height, fov, exspected_res, result))
+                fov += 0.5
+    print(f"Es wurden {counter} Tests mit verschiedenen Inputs durchgeführt")
+    if len(error) > 0:
+        print(f"Dabei sind {len(error)} Fehler aufgetreten:")
+        for elem in error:
+            print(f"Fehler bei ScreenWidth={elem[0]}, AspectRatio={(16, elem[1])} und fov={elem[2]}")
+            print(f"    Erwartetes    Ergebnis: {elem[3]}")
+            print(f"    Tatsächliches Ergebnis: {elem[4]}")
+    else:
+        print("Dabei sind keine Fehler aufgetreten")
+
+# endregion
+
+# region other
 
 def SceneTest():
     myScene = Scene(camera_position=(0, -4, 0))
@@ -451,6 +521,9 @@ def SortTest():
     l1.sort()
     print(l1)
 
-pinholeProjectTest()
+# endregion
+
+# ScaleTest()
+# pinholeProjectTest()
 # SortTest()
 # CameraTransformTest()
